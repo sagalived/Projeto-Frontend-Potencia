@@ -72,6 +72,18 @@ export default function GeneralDashboard({ data }: GeneralDashboardProps) {
     }).format(val);
   };
 
+  const reciboVsMesAnterior = kpis.receitaContratadaVsMesAnterior;
+  const hasReciboComparativo = typeof reciboVsMesAnterior === 'number';
+  const reciboTrendUp = (reciboVsMesAnterior ?? 0) >= 0;
+  const reciboTrendColor = !hasReciboComparativo
+    ? 'text-slate-400'
+    : reciboTrendUp
+      ? 'text-emerald-400'
+      : 'text-rose-400';
+  const reciboTrendLabel = !hasReciboComparativo
+    ? 'Sem base no mês anterior'
+    : `${reciboTrendUp ? '+' : ''}${reciboVsMesAnterior.toFixed(1).replace('.', ',')}% vs mês ant.`;
+
   return (
     <div className="flex flex-col gap-6 p-6 animate-fade-in select-text">
       {/* 1. KPIs Row */}
@@ -81,9 +93,15 @@ export default function GeneralDashboard({ data }: GeneralDashboardProps) {
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">RECEITA CONTRATADA</span>
             <span className="text-lg font-black text-white">{formatCurrencyMi(kpis.receitaContratada)}</span>
-            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-              <ArrowUpRight size={12} />
-              12,6% vs mês ant.
+            <span className={`text-[10px] font-bold flex items-center gap-1 ${reciboTrendColor}`}>
+              {!hasReciboComparativo ? (
+                <Clock size={12} />
+              ) : reciboTrendUp ? (
+                <ArrowUpRight size={12} />
+              ) : (
+                <ArrowDownRight size={12} />
+              )}
+              {reciboTrendLabel}
             </span>
           </div>
           <div className="p-2.5 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-500/10">

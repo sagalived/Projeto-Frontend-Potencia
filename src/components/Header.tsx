@@ -10,17 +10,70 @@ import {
   FileText,
   Briefcase,
   Calendar,
-  Filter
+  RotateCw
 } from 'lucide-react';
 import { FilterState } from '../types';
+
+type DateRange = {
+  startDate: string;
+  endDate: string;
+};
+
+type DatePreset = 'ultimos30' | 'mesAtual' | 'trimestre' | 'custom';
 
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   filters: FilterState;
+  dateRange: DateRange;
+  setDateRange: (range: DateRange) => void;
+  activePreset: DatePreset;
+  onSelectPreset: (preset: DatePreset) => void;
+  onRefreshFromSienge: () => void;
+  isRefreshing: boolean;
+  refreshError: string | null;
 }
 
-export default function Header({ activeTab, setActiveTab, filters }: HeaderProps) {
+export default function Header({
+  activeTab,
+  setActiveTab,
+  filters,
+  dateRange,
+  setDateRange,
+  activePreset,
+  onSelectPreset,
+  onRefreshFromSienge,
+  isRefreshing,
+  refreshError,
+}: HeaderProps) {
+  const minDate = '2026-01-01';
+  const maxDate = '2027-01-01';
+
+  const handleDateChange = (key: 'startDate' | 'endDate', value: string) => {
+    const bounded = value < minDate ? minDate : value > maxDate ? maxDate : value;
+    const next = {
+      ...dateRange,
+      [key]: bounded,
+    };
+
+    if (next.startDate > next.endDate) {
+      if (key === 'startDate') {
+        next.endDate = next.startDate;
+      } else {
+        next.startDate = next.endDate;
+      }
+    }
+
+    setDateRange(next);
+    onSelectPreset('custom');
+  };
+
+  const presets: Array<{ id: DatePreset; label: string }> = [
+    { id: 'ultimos30', label: 'Últimos 30 dias' },
+    { id: 'mesAtual', label: 'Mês atual' },
+    { id: 'trimestre', label: 'Trimestre' },
+  ];
+
   const tabs = [
     { id: 'visao_geral', label: 'VISÃO GERAL', icon: LayoutDashboard, color: 'hover:border-blue-500' },
     { id: 'obras', label: 'OBRAS', icon: Building2, color: 'hover:border-emerald-500' },
@@ -59,6 +112,61 @@ export default function Header({ activeTab, setActiveTab, filters }: HeaderProps
             <span>POWER BI</span>
             <span className="text-orange-500">➔</span>
             <span>SIENGE (ERP)</span>
+          </div>
+        </div>
+
+        <div className="w-full md:flex-1 md:max-w-[520px] bg-slate-900/40 p-2.5 rounded-lg border border-slate-800">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Filtro de Datas Sienge</span>
+              <span className="text-[9px] text-slate-500">Jan/2026 a Jan/2027</span>
+            </div>
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                type="date"
+                min={minDate}
+                max={maxDate}
+                value={dateRange.startDate}
+                onChange={event => handleDateChange('startDate', event.target.value)}
+                className="bg-[#111b35] border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-100 w-full"
+              />
+              <input
+                type="date"
+                min={minDate}
+                max={maxDate}
+                value={dateRange.endDate}
+                onChange={event => handleDateChange('endDate', event.target.value)}
+                className="bg-[#111b35] border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-100 w-full"
+              />
+              <button
+                onClick={onRefreshFromSienge}
+                disabled={isRefreshing}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-300 hover:bg-cyan-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <RotateCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+                {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => onSelectPreset(preset.id)}
+                  className={`rounded-md border px-2 py-1 text-[10px] font-semibold transition-colors ${
+                    activePreset === preset.id
+                      ? 'border-orange-400/60 bg-orange-500/15 text-orange-300'
+                      : 'border-slate-700 bg-[#111b35] text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            {refreshError ? (
+              <p className="text-[10px] text-rose-300">{refreshError}</p>
+            ) : (
+              <p className="text-[10px] text-slate-500">Aplicar filtro e baixar dados do Sienge para o período selecionado.</p>
+            )}
           </div>
         </div>
 

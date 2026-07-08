@@ -1,9 +1,9 @@
 {
-  "fetchedAt": "2026-07-01T06:32:56.919Z",
+  "fetchedAt": "2026-07-08T19:24:54.719Z",
   "datasets": {
     "departamentos": {
       "resourcePath": "/departments",
-      "fetchedAt": "2026-07-01T06:32:56.919Z",
+      "fetchedAt": "2026-07-08T19:24:54.719Z",
       "total": 6,
       "pages": 1,
       "items": [

@@ -1,0 +1,10 @@
+{
+  "lastSyncAt": "2026-07-08T20:13:34.612Z",
+  "previousSyncAt": "2026-07-08T19:44:37.574Z",
+  "incrementalWindow": {
+    "startDate": "2026-07-05",
+    "endDate": "2026-07-08"
+  },
+  "endpointUsed": "/purchase-invoices",
+  "total": 1000
+}

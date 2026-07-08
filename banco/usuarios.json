@@ -1,8 +1,8 @@
 {
-  "fetchedAt": "2026-07-01T06:33:01.124Z",
+  "fetchedAt": "2026-07-08T19:25:05.623Z",
   "status": "derived-from-sienge-records",
   "message": "Usuários derivados dos responsáveis e autores presentes nas obras e pedidos de compra sincronizados.",
-  "total": 40,
+  "total": 35,
   "items": [
     {
       "id": "AMANDA",
@@ -16,8 +16,7 @@
       "id": "ANA",
       "nome": "ANA",
       "fontes": [
-        "obras",
-        "compras"
+        "obras"
       ],
       "ultimaObra": "IFCE - CAMOCIM - SUBESTAÇÃO - GRUPO 02"
     },
@@ -54,14 +53,6 @@
       "ultimaObra": "CONDOMINIO GENESIS"
     },
     {
-      "id": "CAIOMARCOS",
-      "nome": "CAIOMARCOS",
-      "fontes": [
-        "compras"
-      ],
-      "ultimoPedido": "13426"
-    },
-    {
       "id": "CLAUDEMAR",
       "nome": "CLAUDEMAR",
       "fontes": [
@@ -83,7 +74,7 @@
       "fontes": [
         "compras"
       ],
-      "ultimoPedido": "15953"
+      "ultimoPedido": "15896"
     },
     {
       "id": "EMILSON",
@@ -124,7 +115,7 @@
       "fontes": [
         "compras"
       ],
-      "ultimoPedido": "16064"
+      "ultimoPedido": "16083"
     },
     {
       "id": "GEAN",
@@ -135,28 +126,12 @@
       "ultimoPedido": "16065"
     },
     {
-      "id": "HERBERTT",
-      "nome": "HERBERTT",
-      "fontes": [
-        "compras"
-      ],
-      "ultimoPedido": "13978"
-    },
-    {
       "id": "HIRLANDA",
       "nome": "HIRLANDA",
       "fontes": [
         "compras"
       ],
       "ultimoPedido": "15665"
-    },
-    {
-      "id": "ICARO",
-      "nome": "ICARO",
-      "fontes": [
-        "compras"
-      ],
-      "ultimoPedido": "14289"
     },
     {
       "id": "ISAAC",
@@ -232,14 +207,6 @@
       "ultimaObra": "1 - UNILAB - CONSTRUÇÃO DOS BLOCOS ANEXOS DO CAMPUS DOS MALÊS"
     },
     {
-      "id": "MONICA",
-      "nome": "MONICA",
-      "fontes": [
-        "compras"
-      ],
-      "ultimoPedido": "13328"
-    },
-    {
       "id": "NATALIA",
       "nome": "NATALIA",
       "fontes": [
@@ -261,7 +228,7 @@
       "fontes": [
         "compras"
       ],
-      "ultimoPedido": "15953"
+      "ultimoPedido": "16099"
     },
     {
       "id": "SADJA",
@@ -295,7 +262,7 @@
       "fontes": [
         "compras"
       ],
-      "ultimoPedido": "15863"
+      "ultimoPedido": "15978"
     },
     {
       "id": "VANIELE",
@@ -311,7 +278,7 @@
       "fontes": [
         "compras"
       ],
-      "ultimoPedido": "15987"
+      "ultimoPedido": "16091"
     },
     {
       "id": "WALISSON",
@@ -320,14 +287,6 @@
         "compras"
       ],
       "ultimoPedido": "15322"
-    },
-    {
-      "id": "YURI",
-      "nome": "YURI",
-      "fontes": [
-        "compras"
-      ],
-      "ultimoPedido": "14293"
     }
   ]
 }

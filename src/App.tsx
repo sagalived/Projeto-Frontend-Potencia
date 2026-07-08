@@ -34,6 +34,8 @@ import {
   loadSiengeBancoSnapshot,
   SiengeBancoSnapshot,
 } from './bancoData';
+import { loadNfpgBackupData, syncNfpgBackup } from './api/nfpgBackupApi';
+import { loadRfaturadaBackupData, syncRfaturadaBackup } from './api/rfaturadaBackupApi';
 import {
   Building2,
   HardHat,
@@ -51,7 +53,56 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+type DatePreset = 'ultimos30' | 'mesAtual' | 'trimestre' | 'custom';
+
 export default function App() {
+  const API_MIN_DATE = '2026-01-01';
+  const API_MAX_DATE = '2027-01-01';
+
+  const formatAsIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+
+  const clampDate = (isoDate: string) => {
+    if (isoDate < API_MIN_DATE) return API_MIN_DATE;
+    if (isoDate > API_MAX_DATE) return API_MAX_DATE;
+    return isoDate;
+  };
+
+  const buildDefaultDateRange = () => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setMonth(start.getMonth() - 1);
+
+    const startDate = clampDate(formatAsIsoDate(start));
+    const endDate = clampDate(formatAsIsoDate(today));
+
+    return {
+      startDate: startDate <= endDate ? startDate : endDate,
+      endDate: endDate >= startDate ? endDate : startDate,
+    };
+  };
+
+  const buildRangeFromPreset = (preset: Exclude<DatePreset, 'custom'>) => {
+    const today = new Date();
+    const end = new Date(today);
+    const start = new Date(today);
+
+    if (preset === 'ultimos30') {
+      start.setDate(start.getDate() - 30);
+    } else if (preset === 'mesAtual') {
+      start.setDate(1);
+    } else {
+      start.setMonth(start.getMonth() - 2);
+    }
+
+    const startDate = clampDate(formatAsIsoDate(start));
+    const endDate = clampDate(formatAsIsoDate(end));
+
+    return {
+      startDate: startDate <= endDate ? startDate : endDate,
+      endDate: endDate >= startDate ? endDate : startDate,
+    };
+  };
+
   const defaultFilterOptions: DashboardFilterOptions = {
     obras: LISTA_OBRAS,
     periodos: LISTA_PERIODOS,
@@ -67,7 +118,12 @@ export default function App() {
     responsavel: 'Todos'
   });
   const [snapshot, setSnapshot] = useState<SiengeBancoSnapshot | null>(null);
+  const [baseSnapshot, setBaseSnapshot] = useState<SiengeBancoSnapshot | null>(null);
   const [filterOptions, setFilterOptions] = useState<DashboardFilterOptions>(defaultFilterOptions);
+  const [dateRange, setDateRange] = useState(buildDefaultDateRange);
+  const [datePreset, setDatePreset] = useState<DatePreset>('ultimos30');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +133,7 @@ export default function App() {
         return;
       }
 
+      setBaseSnapshot(loadedSnapshot);
       setSnapshot(loadedSnapshot);
       setFilterOptions(getFilterOptionsFromSnapshot(loadedSnapshot));
     });
@@ -94,6 +151,154 @@ export default function App() {
       responsavel: filterOptions.responsaveis.includes(prev.responsavel) ? prev.responsavel : 'Todos',
     }));
   }, [filterOptions]);
+
+  const applyBackupDataToSnapshot = (
+    base: SiengeBancoSnapshot,
+    payload: {
+      startDate: string;
+      endDate: string;
+      nfpg: { items: Array<Record<string, unknown>>; total: number };
+      rfaturada: { items: Array<Record<string, unknown>>; total: number };
+    },
+  ): SiengeBancoSnapshot => {
+    return {
+      ...base,
+      financeiro: {
+        ...base.financeiro,
+        periodoFiltro: {
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+        },
+        datasets: {
+          ...(base.financeiro.datasets || {}),
+          notasFiscaisCompra: {
+            fetchedAt: new Date().toISOString(),
+            total: payload.nfpg.total,
+            pages: 1,
+            items: payload.nfpg.items,
+          },
+          movimentacoesCaixaBancos: {
+            fetchedAt: new Date().toISOString(),
+            total: payload.rfaturada.total,
+            pages: 1,
+            items: payload.rfaturada.items,
+          },
+        },
+      },
+    };
+  };
+
+  useEffect(() => {
+    if (!baseSnapshot) {
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.all([
+      loadNfpgBackupData({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      }),
+      loadRfaturadaBackupData({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      }),
+    ])
+      .then(([nfpgData, rfaturadaData]) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSnapshot(
+          applyBackupDataToSnapshot(baseSnapshot, {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+            nfpg: {
+              items: nfpgData.items,
+              total: nfpgData.total,
+            },
+            rfaturada: {
+              items: rfaturadaData.items,
+              total: rfaturadaData.total,
+            },
+          }),
+        );
+      })
+      .catch(error => {
+        if (cancelled) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : 'Falha ao carregar dados das pastas de backup.';
+        setRefreshError(message);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseSnapshot, dateRange.startDate, dateRange.endDate]);
+
+  const handleRefreshFromSienge = async () => {
+    try {
+      setIsRefreshing(true);
+      setRefreshError(null);
+
+      const normalizedRange = {
+        startDate: clampDate(dateRange.startDate),
+        endDate: clampDate(dateRange.endDate),
+      };
+
+      if (normalizedRange.startDate > normalizedRange.endDate) {
+        setDateRange({
+          startDate: normalizedRange.endDate,
+          endDate: normalizedRange.endDate,
+        });
+        throw new Error('A data inicial não pode ser maior que a data final.');
+      }
+
+      if (!baseSnapshot) {
+        throw new Error('Snapshot base não carregado para aplicar atualização local.');
+      }
+
+      await Promise.all([syncNfpgBackup(), syncRfaturadaBackup()]);
+
+      const [nfpgData, rfaturadaData] = await Promise.all([
+        loadNfpgBackupData(normalizedRange),
+        loadRfaturadaBackupData(normalizedRange),
+      ]);
+
+      setSnapshot(
+        applyBackupDataToSnapshot(baseSnapshot, {
+          startDate: normalizedRange.startDate,
+          endDate: normalizedRange.endDate,
+          nfpg: {
+            items: nfpgData.items,
+            total: nfpgData.total,
+          },
+          rfaturada: {
+            items: rfaturadaData.items,
+            total: rfaturadaData.total,
+          },
+        }),
+      );
+      setDateRange(normalizedRange);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao atualizar dados do Sienge.';
+      setRefreshError(message);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleSelectPreset = (preset: DatePreset) => {
+    if (preset === 'custom') {
+      setDatePreset('custom');
+      return;
+    }
+
+    setDatePreset(preset);
+    setDateRange(buildRangeFromPreset(preset));
+  };
 
   // Calculate dashboard data dynamically based on active filters
   const dashboardData = useMemo(() => {
@@ -138,7 +343,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#060b16] text-slate-300 overflow-hidden font-sans select-none">
+    <div translate="no" className="flex h-screen w-screen bg-[#060b16] text-slate-300 overflow-hidden font-sans select-none">
       {/* 1. Left Sidebar Navigation & Filters */}
       <Sidebar
         activeTab={activeTab}
@@ -155,6 +360,13 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           filters={filters}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          activePreset={datePreset}
+          onSelectPreset={handleSelectPreset}
+          onRefreshFromSienge={handleRefreshFromSienge}
+          isRefreshing={isRefreshing}
+          refreshError={refreshError}
         />
 
         {/* Scrollable Workspace Container */}

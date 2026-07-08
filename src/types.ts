@@ -7,6 +7,7 @@ export interface FilterState {
 
 export interface KPIData {
   receitaContratada: number;
+  receitaContratadaVsMesAnterior?: number | null;
   custoPrevisto: number;
   custoReal: number;
   margemPrevista: number;

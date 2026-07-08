@@ -233,6 +233,40 @@ async function fetchFinanceiro() {
 
   const datasets = {};
   const errors = [];
+
+  async function fetchWithFallback(candidates, key, hint) {
+    let lastError = null;
+
+    for (const candidate of candidates) {
+      try {
+        const payload = await fetchPaged(candidate.path, candidate.query || {});
+        return {
+          ...payload,
+          endpointUsed: candidate.path,
+        };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    errors.push({
+      resource: key,
+      path: candidates.map(c => c.path).join(' | '),
+      status: lastError?.status ?? null,
+      message: lastError?.message ?? `Falha ao carregar recurso ${key}.`,
+      hint,
+    });
+
+    return {
+      fetchedAt: new Date().toISOString(),
+      total: 0,
+      pages: 0,
+      items: [],
+      rawPages: [],
+      endpointUsed: null,
+    };
+  }
+
   const financeResources = [
     { key: 'contasCorrentes', path: '/checking-accounts' },
     { key: 'saldosContas', path: '/accounts-balances', query: { date: todayStr } },
@@ -261,6 +295,50 @@ async function fetchFinanceiro() {
       });
     }
   }
+
+  datasets.notasFiscaisCompra = await fetchWithFallback(
+    [
+      {
+        path: '/subsystems/suprimentos/notas-fiscais-compra',
+        query: {
+          startDate: config.startDate,
+          endDate: config.endDate,
+        },
+      },
+      {
+        path: '/purchase-invoices',
+        query: {
+          startDate: config.startDate,
+          endDate: config.endDate,
+        },
+      },
+    ],
+    'notasFiscaisCompra',
+    'Confira se o módulo de Suprimentos está habilitado e se o usuário tem permissão para notas fiscais de compra.',
+  );
+
+  datasets.contasPagarParcelas = await fetchWithFallback(
+    [
+      {
+        path: '/subsystems/financeiro/contas-a-pagar/parcelas',
+        query: {
+          startDate: config.startDate,
+          endDate: config.endDate,
+          withBankMovements: true,
+        },
+      },
+      {
+        path: '/accounts-payable/installments',
+        query: {
+          startDate: config.startDate,
+          endDate: config.endDate,
+          withBankMovements: true,
+        },
+      },
+    ],
+    'contasPagarParcelas',
+    'Endpoint pode exigir parâmetros extras (companyId/buildingId) e permissão de Contas a Pagar.',
+  );
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -411,7 +489,7 @@ async function main() {
       'insumos é derivado dos itens de pedidos de compra (extração de nível de pedido).',
       'comprasItens busca itens individuais de cada pedido do último mês via /purchase-orders/{id}/items.',
       'usuarios é derivado dos responsáveis e autores presentes nas obras e pedidos de compra.',
-      'financeiro agrega /checking-accounts, /accounts-balances (com date) e /accounts-statements (com startDate/endDate).',
+      'financeiro agrega /checking-accounts, /accounts-balances (com date), /accounts-statements (com startDate/endDate), notas fiscais de compra e parcelas do contas a pagar.',
       'rh tenta /employees, /job-positions e /departments do Sienge.',
     ],
   };

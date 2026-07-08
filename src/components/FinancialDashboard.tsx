@@ -76,6 +76,30 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
     }).format(val);
   };
 
+  const formatCurrencyCompact = (val: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1,
+    }).format(val);
+  };
+
+  const formatMiAsBrl = (miValue: number) => formatCurrencyRaw(miValue * 1_000_000);
+
+  const reciboVsMesAnterior = kpis.receitaContratadaVsMesAnterior;
+  const hasReciboComparativo = typeof reciboVsMesAnterior === 'number';
+  const reciboTrendUp = (reciboVsMesAnterior ?? 0) >= 0;
+  const reciboTrendColor = !hasReciboComparativo
+    ? 'text-slate-400'
+    : reciboTrendUp
+      ? 'text-emerald-400'
+      : 'text-rose-400';
+  const reciboTrendLabel = !hasReciboComparativo
+    ? 'Sem base no mês anterior'
+    : `${reciboTrendUp ? '+' : ''}${reciboVsMesAnterior.toFixed(1).replace('.', ',')}% vs mês ant.`;
+
   return (
     <div className="flex flex-col gap-6 p-6 animate-fade-in select-text">
       {/* 1. Top KPIs Row */}
@@ -85,9 +109,15 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Receita Contratada</span>
             <span className="text-base font-black text-white">{formatCurrencyMi(kpis.receitaContratada)}</span>
-            <span className="text-[9px] text-emerald-400 font-bold flex items-center gap-0.5">
-              <ArrowUpRight size={10} />
-              12,6% vs mês ant.
+            <span className={`text-[9px] font-bold flex items-center gap-0.5 ${reciboTrendColor}`}>
+              {!hasReciboComparativo ? (
+                <Calendar size={10} />
+              ) : reciboTrendUp ? (
+                <ArrowUpRight size={10} />
+              ) : (
+                <ArrowDownRight size={10} />
+              )}
+              {reciboTrendLabel}
             </span>
           </div>
           <div className="p-2 bg-blue-600/10 text-blue-400 border border-blue-500/10 rounded-lg shrink-0">
@@ -192,11 +222,21 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
               <LineChart data={curvaSData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis dataKey="mes" stroke="#64748b" fontSize={9} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={9} tickLine={false} domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                <YAxis
+                  stroke="#64748b"
+                  fontSize={9}
+                  tickLine={false}
+                  domain={[0, 100]}
+                  tickFormatter={v => formatCurrencyCompact((Number(v) / 100) * (kpis.receitaContratada || 0) * 1_000_000)}
+                />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '6px' }}
                   labelStyle={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '9px' }}
                   itemStyle={{ fontSize: '9px', padding: '1px 0' }}
+                  formatter={(value: number, name: string) => [
+                    `${formatCurrencyRaw((Number(value) / 100) * (kpis.receitaContratada || 0) * 1_000_000)} (${Number(value).toFixed(1).replace('.', ',')}%)`,
+                    name,
+                  ]}
                 />
                 <Line name="Prev" type="monotone" dataKey="previstoFisico" stroke="#64748b" strokeDasharray="3 3" dot={false} />
                 <Line name="Fís" type="monotone" dataKey="realizadoFisico" stroke="#10b981" strokeWidth={2} dot={{ r: 1.5 }} />
@@ -216,11 +256,17 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
               <BarChart data={fluxoCaixaMensal} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis dataKey="mes" stroke="#64748b" fontSize={9} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={9} tickLine={false} tickFormatter={v => `${v}M`} />
+                <YAxis
+                  stroke="#64748b"
+                  fontSize={9}
+                  tickLine={false}
+                  tickFormatter={v => formatCurrencyCompact(Number(v) * 1_000_000)}
+                />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '6px' }}
                   labelStyle={{ color: '#94a3b8', fontWeight: 'bold', fontSize: '9px' }}
                   itemStyle={{ fontSize: '9px', padding: '1px 0' }}
+                  formatter={(value: number, name: string) => [formatMiAsBrl(Number(value)), name]}
                 />
                 <Legend iconSize={5} iconType="rect" wrapperStyle={{ fontSize: '8px', paddingTop: '4px' }} />
                 <Bar name="Projetado" dataKey="projetado" fill="#2563eb" radius={[2, 2, 0, 0]} />

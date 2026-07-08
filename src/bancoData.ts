@@ -5,6 +5,7 @@ import {
   LISTA_RESPONSAVEIS,
   getDashboardData,
 } from './data';
+import { siengeGet } from './api/siengeApi';
 import { FilterState, Project5DDetails } from './types';
 
 type BancoCollection<T> = {
@@ -13,6 +14,10 @@ type BancoCollection<T> = {
 
 type FinanceDataset<T> = {
   items?: T[];
+  total?: number;
+  pages?: number;
+  fetchedAt?: string;
+  endpointUsed?: string | null;
 };
 
 type Enterprise = {
@@ -96,6 +101,74 @@ type AccountStatement = {
   statementTypeNotes?: string | null;
 };
 
+type BankMovement = {
+  id?: number | string;
+  companyId?: number;
+  accountNumber?: string;
+  accountName?: string;
+  date?: string | null;
+  movementDate?: string | null;
+  accountingDate?: string | null;
+  documentNumber?: string | null;
+  description?: string | null;
+  history?: string | null;
+  notes?: string | null;
+  type?: string | null;
+  movementType?: string | null;
+  entryType?: string | null;
+  value?: number;
+  amount?: number;
+  createdAt?: string | null;
+};
+
+type PurchaseInvoice = {
+  id?: number | string;
+  buildingId?: number | null;
+  issueDate?: string | null;
+  emissionDate?: string | null;
+  invoiceDate?: string | null;
+  date?: string | null;
+  totalAmount?: number;
+  totalValue?: number;
+  netAmount?: number;
+  netValue?: number;
+  value?: number;
+  amount?: number;
+};
+
+type AccountsPayableInstallmentMovement = {
+  paymentDate?: string | null;
+  movementDate?: string | null;
+  date?: string | null;
+  value?: number;
+  amount?: number;
+  paidAmount?: number;
+};
+
+type AccountsPayableInstallment = {
+  id?: number | string;
+  buildingId?: number | null;
+  dueDate?: string | null;
+  paymentDate?: string | null;
+  status?: string | null;
+  paymentStatus?: string | null;
+  documentType?: string | null;
+  documentOrigin?: string | null;
+  originType?: string | null;
+  sourceDocumentType?: string | null;
+  totalAmount?: number;
+  nominalAmount?: number;
+  amount?: number;
+  value?: number;
+  balanceAmount?: number;
+  openAmount?: number;
+  remainingAmount?: number;
+  outstandingAmount?: number;
+  paidAmount?: number;
+  bankMovements?: AccountsPayableInstallmentMovement[];
+  movements?: AccountsPayableInstallmentMovement[];
+};
+
 type FinanceSnapshot = {
   fetchedAt?: string;
   periodoFiltro?: { startDate?: string; endDate?: string };
@@ -103,6 +176,9 @@ type FinanceSnapshot = {
     contasCorrentes?: FinanceDataset<CheckingAccount>;
     saldosContas?: FinanceDataset<AccountBalance>;
     extratoContas?: FinanceDataset<AccountStatement>;
+    notasFiscaisCompra?: FinanceDataset<PurchaseInvoice>;
+    contasPagarParcelas?: FinanceDataset<AccountsPayableInstallment>;
+    movimentacoesCaixaBancos?: FinanceDataset<BankMovement>;
   };
   errors?: Array<{ resource?: string; path?: string; status?: number | null; message?: string }>;
 };
@@ -159,7 +235,7 @@ export type SiengeBancoSnapshot = {
   empresas: BancoCollection<Company>;
   compras: BancoCollection<PurchaseOrder>;
   financeiro: FinanceSnapshot;
-  usuarios: BancoCollection<UsuarioItem> & { status?: string; message?: string };
+  usuarios: BancoCollection<UsuarioItem> & { status?: string; message?: string; fetchedAt?: string };
   insumos: BancoCollection<unknown>;
   comprasItens?: ComprasItensSnapshot;
   rh?: RhSnapshot;
@@ -202,6 +278,171 @@ function parseIsoDate(value?: string | null) {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getFilterDateRange(periodo: FilterState['periodo'], referenceDate: Date) {
+  if (periodo === 'Este Mês') {
+    return {
+      start: new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1),
+      end: new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59, 999),
+    };
+  }
+
+  if (periodo === 'Último Trimestre') {
+    const start = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 2, 1);
+    const end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (periodo === 'Ano de 2026') {
+    return {
+      start: new Date(2026, 0, 1),
+      end: new Date(2026, 11, 31, 23, 59, 59, 999),
+    };
+  }
+
+  return {
+    start: new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1),
+    end: new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59, 999),
+  };
+}
+
+function dateInRange(date: Date | null, start: Date, end: Date) {
+  if (!date) return false;
+  return date >= start && date <= end;
+}
+
+function shiftDateByMonths(source: Date, months: number) {
+  const shifted = new Date(source);
+  shifted.setMonth(shifted.getMonth() + months);
+  return shifted;
+}
+
+function pickNumericValue(source: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const raw = source[key];
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      return raw;
+    }
+  }
+  return 0;
+}
+
+function normalizeText(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return value.trim().toUpperCase();
+}
+
+function isInvoiceDocument(installment: AccountsPayableInstallment) {
+  const tags = [
+    installment.documentType,
+    installment.documentOrigin,
+    installment.originType,
+    installment.sourceDocumentType,
+  ]
+    .map(normalizeText)
+    .join(' ');
+
+  return /(NF|NOTA\s*FISCAL|INVOICE)/.test(tags);
+}
+
+function isOpenOrPartialStatus(installment: AccountsPayableInstallment) {
+  const status = normalizeText(installment.paymentStatus || installment.status);
+  return /(ABERTO|OPEN|PARCIAL|PARTIAL|PENDENTE|PENDING|A\s*VENCER|TO\s*DUE)/.test(status);
+}
+
+function getInstallmentDueDate(installment: AccountsPayableInstallment) {
+  return parseIsoDate(installment.dueDate);
+}
+
+function getInstallmentRemainingAmount(installment: AccountsPayableInstallment) {
+  const remaining = pickNumericValue(installment as Record<string, unknown>, [
+    'balanceAmount',
+    'openAmount',
+    'remainingAmount',
+    'outstandingAmount',
+  ]);
+
+  if (remaining > 0) {
+    return remaining;
+  }
+
+  const nominal = pickNumericValue(installment as Record<string, unknown>, [
+    'totalAmount',
+    'nominalAmount',
+    'amount',
+    'value',
+  ]);
+  const paid = pickNumericValue(installment as Record<string, unknown>, ['paidAmount']);
+  return Math.max(0, nominal - paid);
+}
+
+function getInvoiceIssueDate(invoice: PurchaseInvoice) {
+  return parseIsoDate(invoice.issueDate || invoice.emissionDate || invoice.invoiceDate || invoice.date);
+}
+
+function getInvoiceAmount(invoice: PurchaseInvoice) {
+  return pickNumericValue(invoice as Record<string, unknown>, [
+    'itemsTotalAmount',
+    'totalAmount',
+    'totalValue',
+    'netAmount',
+    'netValue',
+    'productsAmount',
+    'eletronicInvoiceAmount',
+    'value',
+    'amount',
+  ]);
+}
+
+function getInstallmentPaidAmountInRange(
+  installment: AccountsPayableInstallment,
+  start: Date,
+  end: Date,
+) {
+  const movementCandidates = [installment.bankMovements, installment.movements].find(Array.isArray) || [];
+  const movementAmount = movementCandidates.reduce((sum, movement) => {
+    const movementDate = parseIsoDate(movement.paymentDate || movement.movementDate || movement.date);
+    if (!dateInRange(movementDate, start, end)) {
+      return sum;
+    }
+
+    const value = pickNumericValue(movement as Record<string, unknown>, ['value', 'amount', 'paidAmount']);
+    return sum + Math.abs(value);
+  }, 0);
+
+  if (movementAmount > 0) {
+    return movementAmount;
+  }
+
+  const paymentDate = parseIsoDate(installment.paymentDate);
+  if (!dateInRange(paymentDate, start, end)) {
+    return 0;
+  }
+
+  return Math.abs(pickNumericValue(installment as Record<string, unknown>, ['paidAmount', 'amount', 'value', 'totalAmount']));
+}
+
+function getBankMovementDate(movement: BankMovement) {
+  return parseIsoDate(movement.date || movement.movementDate || movement.accountingDate || movement.createdAt);
+}
+
+function getBankMovementAmount(movement: BankMovement) {
+  return pickNumericValue(movement as Record<string, unknown>, ['value', 'amount']);
+}
+
+function isBankMovementInflow(movement: BankMovement) {
+  const tag = normalizeText(movement.type || movement.movementType || movement.entryType);
+
+  if (/(RECEITA|ENTRADA|CREDIT|CR[EÉ]DITO|INCOME)/.test(tag)) {
+    return true;
+  }
+
+  if (/(DESPESA|SA[IÍ]DA|DEBIT|D[EÉ]BITO|EXPENSE)/.test(tag)) {
+    return false;
+  }
+
+  return getBankMovementAmount(movement) > 0;
 }
 
 function formatDateBR(value?: string | null) {
@@ -397,6 +638,300 @@ export async function loadSiengeBancoSnapshot(): Promise<SiengeBancoSnapshot | n
   }
 }
 
+export type SiengeDateRange = {
+  startDate: string;
+  endDate: string;
+};
+
+function normalizeCollectionPayload(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const source = payload as Record<string, unknown>;
+  const candidates = [source.results, source.data, source.items, source.content, source.value];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return [];
+}
+
+async function fetchPagedFromSienge<T = unknown>(
+  path: string,
+  baseQuery: Record<string, string | number | boolean | undefined | null> = {},
+) {
+  const limit = 200;
+  let offset = 0;
+  const allItems: T[] = [];
+  const rawPages: unknown[] = [];
+
+  while (true) {
+    const payload = await siengeGet<unknown>(path, {
+      ...baseQuery,
+      limit,
+      offset,
+    });
+
+    const items = normalizeCollectionPayload(payload) as T[];
+    rawPages.push(payload);
+    allItems.push(...items);
+
+    if (items.length < limit || items.length === 0) {
+      break;
+    }
+
+    offset += limit;
+  }
+
+  return {
+    resourcePath: path,
+    fetchedAt: new Date().toISOString(),
+    total: allItems.length,
+    pages: rawPages.length,
+    items: allItems,
+    rawPages,
+  };
+}
+
+function buildInsumosFromCompras(compras: PurchaseOrder[]) {
+  const items = compras.map(compra => ({
+    orderId: compra.id,
+    orderNumber: compra.formattedPurchaseOrderId ?? String(compra.id),
+    supplier: compra.supplierId ? `Fornecedor #${compra.supplierId}` : null,
+    date: compra.date ?? null,
+    productId: null,
+    description: compra.internalNotes ?? compra.notes ?? `Pedido ${compra.formattedPurchaseOrderId ?? compra.id}`,
+    quantity: 1,
+    unitPrice: compra.totalAmount ?? null,
+    totalPrice: compra.totalAmount ?? null,
+  }));
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    total: items.length,
+    items,
+  };
+}
+
+function buildUsuariosFromObrasCompras(obras: Enterprise[], compras: PurchaseOrder[]) {
+  const users = new Map<string, UsuarioItem>();
+
+  const upsert = (id: string | null | undefined, fonte: string) => {
+    if (!id) return;
+    const current = users.get(id) || { id, nome: id, fontes: [] };
+    if (!current.fontes.includes(fonte)) {
+      current.fontes.push(fonte);
+    }
+    users.set(id, current);
+  };
+
+  obras.forEach(obra => {
+    upsert(obra.createdBy, 'obras');
+    upsert(obra.modifiedBy, 'obras');
+  });
+
+  compras.forEach(compra => {
+    upsert(compra.buyerId, 'compras');
+  });
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    status: 'derived-from-sienge-records',
+    message: 'Usuários derivados de obras e compras carregadas em tempo real.',
+    total: users.size,
+    items: [...users.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+  };
+}
+
+export async function loadSiengeSnapshotFromApi(dateRange: SiengeDateRange): Promise<SiengeBancoSnapshot> {
+  const startDate = dateRange.startDate;
+  const endDate = dateRange.endDate;
+  const errors: Array<{ resource?: string; path?: string; status?: number | null; message?: string }> = [];
+
+  const withFallback = async <T = unknown>(
+    key: string,
+    candidates: Array<{ path: string; query?: Record<string, string | number | boolean | undefined | null> }>,
+  ) => {
+    let lastError: Error | null = null;
+
+    for (const candidate of candidates) {
+      try {
+        const payload = await fetchPagedFromSienge<T>(candidate.path, candidate.query || {});
+        return {
+          ...payload,
+          endpointUsed: candidate.path,
+        };
+      } catch (error) {
+        lastError = error as Error;
+      }
+    }
+
+    errors.push({
+      resource: key,
+      path: candidates.map(item => item.path).join(' | '),
+      status: null,
+      message: lastError?.message ?? `Falha ao carregar ${key}.`,
+    });
+
+    return {
+      fetchedAt: new Date().toISOString(),
+      total: 0,
+      pages: 0,
+      items: [],
+      rawPages: [],
+      endpointUsed: null,
+    };
+  };
+
+  const safeFetch = async <T = unknown>(
+    key: string,
+    path: string,
+    query: Record<string, string | number | boolean | undefined | null> = {},
+  ) => {
+    try {
+      return await fetchPagedFromSienge<T>(path, query);
+    } catch (error) {
+      errors.push({
+        resource: key,
+        path,
+        status: null,
+        message: error instanceof Error ? error.message : `Falha ao carregar ${key}.`,
+      });
+
+      return {
+        fetchedAt: new Date().toISOString(),
+        total: 0,
+        pages: 0,
+        items: [] as T[],
+        rawPages: [] as unknown[],
+      };
+    }
+  };
+
+  const [clientes, empresas, obras, compras, contasCorrentes, saldosContas, extratoContas] = await Promise.all([
+    safeFetch<Customer>('clientes', '/customers', { onlyActive: true }),
+    safeFetch<Company>('empresas', '/companies'),
+    safeFetch<Enterprise>('obras', '/enterprises'),
+    safeFetch<PurchaseOrder>('compras', '/purchase-orders', { startDate, endDate }),
+    safeFetch<CheckingAccount>('contasCorrentes', '/checking-accounts'),
+    safeFetch<AccountBalance>('saldosContas', '/accounts-balances', { date: endDate }),
+    safeFetch<AccountStatement>('extratoContas', '/accounts-statements', { startDate, endDate }),
+  ]);
+
+  const notasFiscaisCompra = await withFallback<PurchaseInvoice>('notasFiscaisCompra', [
+    {
+      path: '/subsystems/suprimentos/notas-fiscais-compra',
+      query: { startDate, endDate },
+    },
+    {
+      path: '/purchase-invoices',
+      query: { startDate, endDate },
+    },
+  ]);
+
+  const contasPagarParcelas = await withFallback<AccountsPayableInstallment>('contasPagarParcelas', [
+    {
+      path: '/subsystems/financeiro/contas-a-pagar/parcelas',
+      query: { startDate, endDate, withBankMovements: true },
+    },
+    {
+      path: '/accounts-payable/installments',
+      query: { startDate, endDate, withBankMovements: true },
+    },
+  ]);
+
+  const needsCoreFallback = (obras.items?.length || 0) === 0 || (compras.items?.length || 0) === 0;
+  const fallbackSnapshot = needsCoreFallback ? await loadSiengeBancoSnapshot() : null;
+
+  if (needsCoreFallback) {
+    errors.push({
+      resource: 'core-data-fallback',
+      path: '/banco/*.json',
+      status: null,
+      message: 'Endpoints principais retornaram vazio; mantendo base local e aplicando dados financeiros atualizados da API.',
+    });
+  }
+
+  const mergedObras = (obras.items?.length || 0) > 0
+    ? (obras.items || [])
+    : (fallbackSnapshot?.obras.items || []);
+  const mergedCompras = (compras.items?.length || 0) > 0
+    ? (compras.items || [])
+    : (fallbackSnapshot?.compras.items || []);
+  const mergedClientes = (clientes.items?.length || 0) > 0
+    ? (clientes.items || [])
+    : (fallbackSnapshot?.clientes.items || []);
+  const mergedEmpresas = (empresas.items?.length || 0) > 0
+    ? (empresas.items || [])
+    : (fallbackSnapshot?.empresas.items || []);
+
+  if (mergedObras.length === 0 && mergedCompras.length === 0) {
+    throw new Error('Não foi possível carregar dados para montar o dashboard no período selecionado.');
+  }
+
+  const usuarios = mergedObras.length > 0 || mergedCompras.length > 0
+    ? buildUsuariosFromObrasCompras(mergedObras, mergedCompras)
+    : (fallbackSnapshot?.usuarios || {
+      fetchedAt: new Date().toISOString(),
+      status: 'derived-from-sienge-records',
+      message: 'Usuários indisponíveis para o período.',
+      total: 0,
+      items: [],
+    });
+  const insumos = mergedCompras.length > 0
+    ? buildInsumosFromCompras(mergedCompras)
+    : (fallbackSnapshot?.insumos || {
+      fetchedAt: new Date().toISOString(),
+      total: 0,
+      items: [],
+    });
+
+  return {
+    obras: { items: mergedObras },
+    clientes: { items: mergedClientes },
+    empresas: { items: mergedEmpresas },
+    compras: { items: mergedCompras },
+    financeiro: {
+      fetchedAt: new Date().toISOString(),
+      periodoFiltro: { startDate, endDate },
+      datasets: {
+        contasCorrentes,
+        saldosContas,
+        extratoContas,
+        notasFiscaisCompra,
+        contasPagarParcelas,
+      },
+      errors,
+    },
+    usuarios,
+    insumos,
+    comprasItens: {
+      fetchedAt: new Date().toISOString(),
+      period: `${startDate}..${endDate}`,
+      totalOrders: 0,
+      total: 0,
+      errors: 0,
+      items: fallbackSnapshot?.comprasItens?.items || [],
+    },
+    rh: fallbackSnapshot?.rh || {
+      fetchedAt: new Date().toISOString(),
+      datasets: {
+        funcionarios: { items: [] },
+        cargos: { items: [] },
+        departamentos: { items: [] },
+      },
+      errors: [],
+    },
+  };
+}
+
 export function getFilterOptionsFromSnapshot(snapshot: SiengeBancoSnapshot): DashboardFilterOptions {
   const allEnterprises = snapshot.obras.items || [];
   const customers = snapshot.clientes.items || [];
@@ -482,7 +1017,11 @@ export function buildSuprimentosData(snapshot: SiengeBancoSnapshot): {
       status: (isPO ? order.status : item.status) ?? '',
       authorized: isPO ? Boolean(order.authorized) : Boolean(item.authorized),
       totalPrice: isPO ? (order.totalAmount ?? 0) : (item.totalPrice ?? 0),
-      category: derivePurchaseCategory(isPO ? order : { internalNotes: item.internalNotes, notes: '' }),
+      category: derivePurchaseCategory(isPO ? order : {
+        id: Number(item.orderId ?? 0),
+        internalNotes: item.internalNotes,
+        notes: '',
+      }),
     };
   }
 
@@ -710,13 +1249,13 @@ export function buildIndicadoresFinanceiros(snapshot: SiengeBancoSnapshot) {
       name: 'Margem operacional estimada (%)',
       value: parseFloat(margemReal.toFixed(1)),
       metaLabel: 'meta: > 8%',
-      status: (margemReal >= 8 ? 'success' : 'warning') as const,
+      status: margemReal >= 8 ? 'success' : 'warning',
     },
     {
       name: 'Pedidos autorizados (%)',
       value: authorizedPct,
       metaLabel: 'meta: > 70%',
-      status: (authorizedPct >= 70 ? 'success' : 'warning') as const,
+      status: authorizedPct >= 70 ? 'success' : 'warning',
     },
   ];
 }
@@ -1056,8 +1595,94 @@ export function buildDashboardDataFromSnapshot(snapshot: SiengeBancoSnapshot, fi
 
   const totalComprado = scopedPurchases.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
   const totalCompradoAcumulado = purchasesByScope.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-  const estimatedRevenue = totalComprado * 1.18;
-  const estimatedPlannedCost = totalComprado * 1.06;
+  const purchaseSeries = purchasesByResponsible.filter(order => parseIsoDate(order.date));
+  const latestReferenceDate = purchaseSeries.length > 0
+    ? (purchaseSeries
+      .map(order => parseIsoDate(order.date) as Date)
+      .sort((left, right) => left.getTime() - right.getTime())
+      .at(-1) as Date)
+    : new Date();
+  const periodStartRaw = parseIsoDate(snapshot.financeiro.periodoFiltro?.startDate);
+  const periodEndRaw = parseIsoDate(snapshot.financeiro.periodoFiltro?.endDate);
+  const selectedRange = periodStartRaw && periodEndRaw
+    ? {
+      start: new Date(periodStartRaw.getFullYear(), periodStartRaw.getMonth(), periodStartRaw.getDate(), 0, 0, 0, 0),
+      end: new Date(periodEndRaw.getFullYear(), periodEndRaw.getMonth(), periodEndRaw.getDate(), 23, 59, 59, 999),
+    }
+    : getFilterDateRange(filters.periodo, latestReferenceDate);
+  const currentDate = new Date();
+  const currentMonthRange = {
+    start: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+    end: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999),
+  };
+
+  const notasFiscais = snapshot.financeiro.datasets?.notasFiscaisCompra?.items || [];
+  const parcelas = snapshot.financeiro.datasets?.contasPagarParcelas?.items || [];
+
+  const notasByScope = notasFiscais.filter(invoice => (
+    invoice.buildingId == null || enterpriseIds.has(invoice.buildingId)
+  ));
+
+  const parcelasByScope = parcelas.filter(installment => (
+    installment.buildingId == null || enterpriseIds.has(installment.buildingId)
+  ));
+
+  const computeReciboForRange = (start: Date, end: Date) => {
+    const totalNotas = notasByScope.reduce((sum, invoice) => {
+      const issueDate = getInvoiceIssueDate(invoice);
+      if (!dateInRange(issueDate, start, end)) {
+        return sum;
+      }
+      return sum + Math.abs(getInvoiceAmount(invoice));
+    }, 0);
+
+    const totalParcelas = parcelasByScope
+      .filter(isInvoiceDocument)
+      .reduce(
+        (sum, installment) => sum + getInstallmentPaidAmountInRange(installment, start, end),
+        0,
+      );
+
+    const recibo = totalParcelas > 0 ? totalParcelas : totalNotas;
+    return {
+      totalNotas,
+      totalParcelas,
+      recibo,
+    };
+  };
+
+  const reciboAtual = computeReciboForRange(selectedRange.start, selectedRange.end);
+  const totalNotasFiscaisNoPeriodo = reciboAtual.totalNotas;
+  const totalParcelasLiquidadasNFNoPeriodo = reciboAtual.totalParcelas;
+
+  const previousRange = {
+    start: shiftDateByMonths(selectedRange.start, -1),
+    end: shiftDateByMonths(selectedRange.end, -1),
+  };
+  const reciboMesAnterior = computeReciboForRange(previousRange.start, previousRange.end).recibo;
+
+  const custoPrevistoMesAtual = parcelasByScope
+    .filter(installment => {
+      const dueDate = getInstallmentDueDate(installment);
+      return dateInRange(dueDate, currentMonthRange.start, currentMonthRange.end) && isOpenOrPartialStatus(installment);
+    })
+    .reduce((sum, installment) => sum + getInstallmentRemainingAmount(installment), 0);
+
+  const reciboContratado = reciboAtual.recibo;
+  const reciboContratadoVsMesAnterior = reciboMesAnterior > 0
+    ? ((reciboContratado - reciboMesAnterior) / reciboMesAnterior) * 100
+    : null;
+
+  const movimentacoesCaixaBancos = snapshot.financeiro.datasets?.movimentacoesCaixaBancos?.items || [];
+  const receitaFaturadaPeriodo = movimentacoesCaixaBancos
+    .filter(movement => {
+      const movementDate = getBankMovementDate(movement);
+      return dateInRange(movementDate, selectedRange.start, selectedRange.end) && isBankMovementInflow(movement);
+    })
+    .reduce((sum, movement) => sum + Math.abs(getBankMovementAmount(movement)), 0);
+
+  const estimatedRevenue = reciboContratado > 0 ? reciboContratado : totalComprado * 1.18;
+  const estimatedPlannedCost = custoPrevistoMesAtual > 0 ? custoPrevistoMesAtual : totalComprado * 1.06;
   const margemReal = estimatedRevenue === 0 ? 0 : ((estimatedRevenue - totalComprado) / estimatedRevenue) * 100;
   const margemPrevista = estimatedRevenue === 0 ? 0 : ((estimatedRevenue - estimatedPlannedCost) / estimatedRevenue) * 100;
   const progresses = scopedEnterprises.map(enterprise => deriveProgress(enterprise, getEnterpriseOrders(enterprise, purchases)));
@@ -1153,11 +1778,20 @@ export function buildDashboardDataFromSnapshot(snapshot: SiengeBancoSnapshot, fi
     projectDetails.datas.atrasoDias > 0 ? { id: 'delay', text: `Existem ${projectDetails.datas.atrasoDias} dias-equivalentes de atraso nas entregas da obra ${projectDetails.name}.`, severity: projectDetails.datas.atrasoDias > 12 ? 'critical' : 'warning' as const } : null,
     scopedPurchases.filter(order => !order.authorized).length > 0 ? { id: 'approval', text: `${scopedPurchases.filter(order => !order.authorized).length} pedidos ainda aguardam autorização.`, severity: 'warning' as const } : null,
     checkingAccounts.length > 0 ? { id: 'finance', text: `${checkingAccounts.length} contas correntes foram sincronizadas do Sienge.`, severity: 'info' as const } : null,
+    totalParcelasLiquidadasNFNoPeriodo === 0 && totalNotasFiscaisNoPeriodo > 0
+      ? { id: 'nf-no-bank-movements', text: 'Sem movimentações bancárias de parcelas NF no período filtrado; usando notas fiscais emitidas como referência.', severity: 'info' as const }
+      : null,
   ].filter(Boolean);
 
   const financeResults = [
-    { descricao: 'Receita estimada a partir da carteira comprada', previsto: estimatedRevenue, realizado: estimatedRevenue * 0.96, desvio: estimatedRevenue * -0.04, percentualDesvio: -4.0 },
-    { descricao: 'Custos de compras sincronizados', previsto: estimatedPlannedCost, realizado: totalComprado, desvio: totalComprado - estimatedPlannedCost, percentualDesvio: estimatedPlannedCost === 0 ? 0 : parseFloat((((totalComprado - estimatedPlannedCost) / estimatedPlannedCost) * 100).toFixed(1)) },
+    {
+      descricao: 'Notas fiscais emitidas e parcelas liquidadas (NF)',
+      previsto: totalNotasFiscaisNoPeriodo,
+      realizado: totalParcelasLiquidadasNFNoPeriodo > 0 ? totalParcelasLiquidadasNFNoPeriodo : totalNotasFiscaisNoPeriodo,
+      desvio: (totalParcelasLiquidadasNFNoPeriodo > 0 ? totalParcelasLiquidadasNFNoPeriodo : totalNotasFiscaisNoPeriodo) - totalNotasFiscaisNoPeriodo,
+      percentualDesvio: totalNotasFiscaisNoPeriodo === 0 ? 0 : parseFloat(((((totalParcelasLiquidadasNFNoPeriodo > 0 ? totalParcelasLiquidadasNFNoPeriodo : totalNotasFiscaisNoPeriodo) - totalNotasFiscaisNoPeriodo) / totalNotasFiscaisNoPeriodo) * 100).toFixed(1)),
+    },
+    { descricao: 'Parcelas em aberto/parcial com vencimento no mês', previsto: estimatedPlannedCost, realizado: totalComprado, desvio: totalComprado - estimatedPlannedCost, percentualDesvio: estimatedPlannedCost === 0 ? 0 : parseFloat((((totalComprado - estimatedPlannedCost) / estimatedPlannedCost) * 100).toFixed(1)) },
     { descricao: 'Margem estimada', previsto: margemPrevista, realizado: margemReal, desvio: margemReal - margemPrevista, percentualDesvio: margemReal - margemPrevista },
   ];
 
@@ -1244,7 +1878,8 @@ export function buildDashboardDataFromSnapshot(snapshot: SiengeBancoSnapshot, fi
     filters,
     availableProjects: projectCatalog,
     kpis: {
-      receitaContratada: parseFloat((estimatedRevenue / 1000000).toFixed(2)),
+      receitaContratada: parseFloat((reciboContratado / 1000000).toFixed(2)),
+      receitaContratadaVsMesAnterior: reciboContratadoVsMesAnterior === null ? null : parseFloat(reciboContratadoVsMesAnterior.toFixed(1)),
       custoPrevisto: parseFloat((estimatedPlannedCost / 1000000).toFixed(2)),
       custoReal: parseFloat((totalComprado / 1000000).toFixed(2)),
       margemPrevista: parseFloat(margemPrevista.toFixed(2)),
@@ -1253,7 +1888,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SiengeBancoSnapshot, fi
       obrasPublicas: publicCount,
       obrasPrivadas: privateCount,
       avancoMedio,
-      receitaFaturada: parseFloat(((estimatedRevenue * 0.96) / 1000000).toFixed(2)),
+      receitaFaturada: parseFloat(((receitaFaturadaPeriodo > 0 ? receitaFaturadaPeriodo : (totalParcelasLiquidadasNFNoPeriodo > 0 ? totalParcelasLiquidadasNFNoPeriodo : totalNotasFiscaisNoPeriodo) * 0.96) / 1000000).toFixed(2)),
       fluxoCaixaProjetado: parseFloat((monthlySeries.reduce((sum, item) => sum + item.total * 1.08, 0)).toFixed(2)),
       fluxoCaixaReal: parseFloat((monthlySeries.reduce((sum, item) => sum + item.total, 0)).toFixed(2)),
       desvioOrcamentario: parseFloat((((totalComprado - estimatedPlannedCost) / Math.max(1, estimatedPlannedCost)) * 100).toFixed(1)),

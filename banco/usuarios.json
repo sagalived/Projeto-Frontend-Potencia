@@ -1,0 +1,333 @@
+{
+  "fetchedAt": "2026-07-01T06:33:01.124Z",
+  "status": "derived-from-sienge-records",
+  "message": "Usuários derivados dos responsáveis e autores presentes nas obras e pedidos de compra sincronizados.",
+  "total": 40,
+  "items": [
+    {
+      "id": "AMANDA",
+      "nome": "AMANDA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "CONSTRUÇÃO DE 01 CRECHE TIPO II - DISTRITO DE SERENO - OCARA CE"
+    },
+    {
+      "id": "ANA",
+      "nome": "ANA",
+      "fontes": [
+        "obras",
+        "compras"
+      ],
+      "ultimaObra": "IFCE - CAMOCIM - SUBESTAÇÃO - GRUPO 02"
+    },
+    {
+      "id": "ANTONIO",
+      "nome": "ANTONIO",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15788"
+    },
+    {
+      "id": "ATILA",
+      "nome": "ATILA",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15979"
+    },
+    {
+      "id": "BARBARA",
+      "nome": "BARBARA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "IFCE CONSTRUÇÃO SALAS DE AULA - MORADA NOVA"
+    },
+    {
+      "id": "BRUNO.BOEIRA",
+      "nome": "BRUNO.BOEIRA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "CONDOMINIO GENESIS"
+    },
+    {
+      "id": "CAIOMARCOS",
+      "nome": "CAIOMARCOS",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "13426"
+    },
+    {
+      "id": "CLAUDEMAR",
+      "nome": "CLAUDEMAR",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15912"
+    },
+    {
+      "id": "DEVJUNIOR",
+      "nome": "DEVJUNIOR",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "EXPANSÃO IV DO IFCE - CAMPUS CASCAVEL - CIDADE CASCAVEL"
+    },
+    {
+      "id": "ELTONABREU",
+      "nome": "ELTONABREU",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15953"
+    },
+    {
+      "id": "EMILSON",
+      "nome": "EMILSON",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "IFCE CONSTRUÇÃO ESPAÇO DE VIVÊNCIA - TABULEIRO DO NORTE"
+    },
+    {
+      "id": "FARID",
+      "nome": "FARID",
+      "fontes": [
+        "obras",
+        "compras"
+      ],
+      "ultimaObra": "IFCE MANUTENÇÃO PREDIAL - FORTALEZA"
+    },
+    {
+      "id": "FERNANDO",
+      "nome": "FERNANDO",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "SEDUC REFORMA DO CEJAQUI - AQUIRAZ"
+    },
+    {
+      "id": "FRANCILEUDO",
+      "nome": "FRANCILEUDO",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15452"
+    },
+    {
+      "id": "FRANCISCOVINICIUS",
+      "nome": "FRANCISCOVINICIUS",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "16064"
+    },
+    {
+      "id": "GEAN",
+      "nome": "GEAN",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "16065"
+    },
+    {
+      "id": "HERBERTT",
+      "nome": "HERBERTT",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "13978"
+    },
+    {
+      "id": "HIRLANDA",
+      "nome": "HIRLANDA",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15665"
+    },
+    {
+      "id": "ICARO",
+      "nome": "ICARO",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "14289"
+    },
+    {
+      "id": "ISAAC",
+      "nome": "ISAAC",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "Espólios de demolição / Reciclagem"
+    },
+    {
+      "id": "JACKSON",
+      "nome": "JACKSON",
+      "fontes": [
+        "obras",
+        "compras"
+      ],
+      "ultimaObra": "IFCE CONSTRUÇÃO SALAS DE AULA - MORADA NOVA"
+    },
+    {
+      "id": "JANECELY",
+      "nome": "JANECELY",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "2 - CONSTRUÇÃO DE 12 SALAS DE AULA COM QUADRA POLIESPORTIVA COBERTA - ASSARE"
+    },
+    {
+      "id": "JOHHANESCOSTA",
+      "nome": "JOHHANESCOSTA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "REFORMA DE FÓRUM VELHO - ADEQUAÇÃO DE GABINETE - MARACANAÚ"
+    },
+    {
+      "id": "LARISSA",
+      "nome": "LARISSA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "AMPLIAÇÃO DO HOSPITAL E MATERNIDADE LUZIA TEODORO DA COSTA NO MUNICÍPIO DE ORÓS"
+    },
+    {
+      "id": "LEANDRO",
+      "nome": "LEANDRO",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "CONSTRUÇÃO DE UMA ESCOLA - 12 SALAS - VARZEA ALEGRE"
+    },
+    {
+      "id": "LEONARDO",
+      "nome": "LEONARDO",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "IFCE - CAMPUS ITAPIPOCA - SUBESTAÇÃO - GRUPO 02"
+    },
+    {
+      "id": "LEVI",
+      "nome": "LEVI",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "3 - SOP - CONSTRUÇÃO DE CEI - MARACANAÚ "
+    },
+    {
+      "id": "MARLON.PINTO",
+      "nome": "MARLON.PINTO",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "1 - UNILAB - CONSTRUÇÃO DOS BLOCOS ANEXOS DO CAMPUS DOS MALÊS"
+    },
+    {
+      "id": "MONICA",
+      "nome": "MONICA",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "13328"
+    },
+    {
+      "id": "NATALIA",
+      "nome": "NATALIA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "IFCE MANUTENÇAO SUBESTAÇAO - CAMPUS FORTALEZA"
+    },
+    {
+      "id": "PEDROITALO",
+      "nome": "PEDROITALO",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "CONSTRUÇÃO DE 01 CRECHE TIPO II - DISTRITO CURUPIRA - OCARA CE"
+    },
+    {
+      "id": "RAFAEL",
+      "nome": "RAFAEL",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15953"
+    },
+    {
+      "id": "SADJA",
+      "nome": "SADJA",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "IFCE MANUTENÇÃO PREDIAL - MORADA NOVA"
+    },
+    {
+      "id": "SANDRONEY",
+      "nome": "SANDRONEY",
+      "fontes": [
+        "obras",
+        "compras"
+      ],
+      "ultimaObra": "IFCE MANUTENÇÃO PREDIAL - CANINDÉ"
+    },
+    {
+      "id": "SARAH",
+      "nome": "SARAH",
+      "fontes": [
+        "obras",
+        "compras"
+      ],
+      "ultimaObra": "ALMOXARIFADO DINÂMICA"
+    },
+    {
+      "id": "TEREZARODRIGUES",
+      "nome": "TEREZARODRIGUES",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15863"
+    },
+    {
+      "id": "VANIELE",
+      "nome": "VANIELE",
+      "fontes": [
+        "obras"
+      ],
+      "ultimaObra": "CONTRUÇÃO DE 04 PRAÇAS - MORRINHOS"
+    },
+    {
+      "id": "VICTORJEFFERSON",
+      "nome": "VICTORJEFFERSON",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15987"
+    },
+    {
+      "id": "WALISSON",
+      "nome": "WALISSON",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "15322"
+    },
+    {
+      "id": "YURI",
+      "nome": "YURI",
+      "fontes": [
+        "compras"
+      ],
+      "ultimoPedido": "14293"
+    }
+  ]
+}

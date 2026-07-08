@@ -1,0 +1,86 @@
+{
+  "fetchedAt": "2026-07-01T06:32:56.919Z",
+  "datasets": {
+    "departamentos": {
+      "resourcePath": "/departments",
+      "fetchedAt": "2026-07-01T06:32:56.919Z",
+      "total": 6,
+      "pages": 1,
+      "items": [
+        {
+          "departmentId": 8293,
+          "departmentName": "CAMINHAO"
+        },
+        {
+          "departmentId": 2,
+          "departmentName": "HOSPITAL ORÓS"
+        },
+        {
+          "departmentId": 4,
+          "departmentName": "COMPRAS"
+        },
+        {
+          "departmentId": 5,
+          "departmentName": "RECURSOS HUMANOS"
+        },
+        {
+          "departmentId": 6,
+          "departmentName": "FINANCEIRO"
+        },
+        {
+          "departmentId": 3,
+          "departmentName": "LICITAÇÃO"
+        }
+      ],
+      "rawPages": [
+        {
+          "resultSetMetadata": {
+            "count": 6,
+            "offset": 0,
+            "limit": 200
+          },
+          "results": [
+            {
+              "departmentId": 8293,
+              "departmentName": "CAMINHAO"
+            },
+            {
+              "departmentId": 2,
+              "departmentName": "HOSPITAL ORÓS"
+            },
+            {
+              "departmentId": 4,
+              "departmentName": "COMPRAS"
+            },
+            {
+              "departmentId": 5,
+              "departmentName": "RECURSOS HUMANOS"
+            },
+            {
+              "departmentId": 6,
+              "departmentName": "FINANCEIRO"
+            },
+            {
+              "departmentId": 3,
+              "departmentName": "LICITAÇÃO"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "errors": [
+    {
+      "resource": "funcionarios",
+      "path": "/employees",
+      "status": 404,
+      "message": "Sienge request failed (404) for https://api.sienge.com.br/dinamicaempreendimentos/public/api/v1/employees?limit=200&offset=0"
+    },
+    {
+      "resource": "cargos",
+      "path": "/job-positions",
+      "status": 404,
+      "message": "Sienge request failed (404) for https://api.sienge.com.br/dinamicaempreendimentos/public/api/v1/job-positions?limit=200&offset=0"
+    }
+  ]
+}

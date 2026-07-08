@@ -1,6 +1,5 @@
 {
   "name": "Centro de Inteligência Grupo Potencial",
-  "description": "Dashboard de inteligência e controle de obras integrado com CRM Bitrix e ERP Sienge, apresentando curvas S, modelagem BIM 5D e dados financeiros/compras.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "Dashboard executivo integrado ao ERP Sienge — obras, compras, financeiro, suprimentos e RH em tempo real.",
+  "version": "1.0.0"
 }

@@ -28,6 +28,8 @@ export interface KPIData {
   pedidosEmAberto?: number;
   atrasosEntrega?: number;
   comprasEmergenciais?: number;
+  totalPendingValue?: number;
+  totalLateValue?: number;
 }
 
 export interface CurvaSData {
@@ -129,6 +131,7 @@ export interface FluxoCaixaDetalhadoRow {
   saidas: number;
   saldoProjetado: number;
   saldoReal: number;
+  isProjection?: boolean;
 }
 
 export interface FinanceIndicator {

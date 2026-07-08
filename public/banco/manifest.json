@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-07-01T06:32:56.328Z",
+  "config": {
+    "subdomain": "dinamicaempreendimentos",
+    "apiUser": "dinamicaempreendimentos-pedrobi",
+    "startDate": "2025-01-01",
+    "endDate": "2026-07-01"
+  },
+  "notes": [
+    "clientes, empresas e obras usam endpoints REST documentados do Sienge.",
+    "insumos é derivado dos itens de pedidos de compra (extração de nível de pedido).",
+    "comprasItens busca itens individuais de cada pedido do último mês via /purchase-orders/{id}/items.",
+    "usuarios é derivado dos responsáveis e autores presentes nas obras e pedidos de compra.",
+    "financeiro agrega /checking-accounts, /accounts-balances (com date) e /accounts-statements (com startDate/endDate).",
+    "rh tenta /employees, /job-positions e /departments do Sienge."
+  ]
+}

@@ -145,7 +145,7 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">F.C. Projetado</span>
             <span className="text-base font-black text-white">{formatCurrencyMi(kpis.fluxoCaixaProjetado || 0)}</span>
-            <span className="text-[9px] text-slate-500 font-bold">Saldo em 31/05/2025</span>
+            <span className="text-[9px] text-slate-500 font-bold">F.C. Projetado Acumulado</span>
           </div>
           <div className="p-2 bg-teal-600/10 text-teal-400 border border-teal-500/10 rounded-lg shrink-0">
             <Calendar size={16} />
@@ -157,7 +157,7 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">F.C. Real</span>
             <span className="text-base font-black text-white">{formatCurrencyMi(kpis.fluxoCaixaReal || 0)}</span>
-            <span className="text-[9px] text-slate-500 font-bold">Saldo em 31/05/2025</span>
+            <span className="text-[9px] text-slate-500 font-bold">F.C. Real Acumulado</span>
           </div>
           <div className="p-2 bg-emerald-600/10 text-emerald-400 border border-emerald-500/10 rounded-lg shrink-0">
             <CheckCircle size={16} />
@@ -319,7 +319,7 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
         {/* DEMONSTRATIVO DE RESULTADO */}
         <div className="lg:col-span-4 bg-[#0b1329] border border-slate-800 rounded-xl p-5 flex flex-col shadow-md">
           <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider mb-3 border-b border-slate-800 pb-2">
-            DEMONSTRATIVO DE RESULTADO (ACUMULADO)
+            DEMONSTRATIVO DE RESULTADO — ÚLT. 3 MESES (SIENGE)
           </h4>
           <div className="overflow-x-auto flex-1 max-h-[220px]">
             <table className="w-full text-left text-xs font-medium border-collapse">
@@ -370,7 +370,7 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
         {/* FLUXO DE CAIXA DETALHADO */}
         <div className="lg:col-span-3 bg-[#0b1329] border border-slate-800 rounded-xl p-5 flex flex-col shadow-md">
           <h4 className="text-xs font-black uppercase text-slate-300 tracking-wider mb-3 border-b border-slate-800 pb-2">
-            FLUXO DE CAIXA DETALHADO (PRÓXIMOS 6 MESES)
+            FLUXO DE CAIXA — ÚLT. 3 MESES + PROJEÇÃO ATÉ DEZ/{new Date().getFullYear()}
           </h4>
           <div className="overflow-x-auto flex-1 max-h-[220px]">
             <table className="w-full text-left text-xs font-medium border-collapse">
@@ -384,11 +384,16 @@ export default function FinancialDashboard({ data }: FinancialDashboardProps) {
               </thead>
               <tbody className="divide-y divide-slate-800/40 text-slate-300">
                 {fluxoCaixaDetalhado.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/20 text-slate-200 transition-colors">
-                    <td className="py-2 px-2 font-semibold text-[11px] text-slate-400">{row.mes}</td>
+                  <tr key={idx} className={`hover:bg-slate-800/20 transition-colors ${row.isProjection ? 'opacity-60' : 'text-slate-200'}`}>
+                    <td className="py-2 px-2 font-semibold text-[11px] text-slate-400">
+                      {row.mes}
+                      {row.isProjection && <span className="ml-1 text-[8px] text-amber-500 font-black">PROJ</span>}
+                    </td>
                     <td className="py-2 px-2 text-right font-mono text-[11px] text-emerald-400">+{formatCurrencyRaw(row.entradas)}</td>
                     <td className="py-2 px-2 text-right font-mono text-[11px] text-red-400">-{formatCurrencyRaw(row.saidas)}</td>
-                    <td className="py-2 px-2 text-right font-mono text-[11px] font-bold">{formatCurrencyRaw(row.saldoReal)}</td>
+                    <td className="py-2 px-2 text-right font-mono text-[11px] font-bold">
+                      {row.isProjection ? <span className="text-amber-400">{formatCurrencyRaw(row.saldoProjetado)}</span> : formatCurrencyRaw(row.saldoReal)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

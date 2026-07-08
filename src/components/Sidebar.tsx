@@ -15,25 +15,28 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { FilterState } from '../types';
-import {
-  LISTA_OBRAS,
-  LISTA_PERIODOS,
-  LISTA_CLIENTES,
-  LISTA_RESPONSAVEIS
-} from '../data';
+
+interface SidebarOptions {
+  obras: string[];
+  periodos: string[];
+  clientes: string[];
+  responsaveis: string[];
+}
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+  options: SidebarOptions;
 }
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
   filters,
-  setFilters
+  setFilters,
+  options,
 }: SidebarProps) {
   // Navigation Menu Items with their respective IDs and Icons
   const menuItems = [
@@ -149,7 +152,7 @@ export default function Sidebar({
                 onChange={e => handleFilterChange('obra', e.target.value)}
                 className="w-full bg-[#111c30] text-slate-200 border border-slate-800 rounded-lg py-1.5 px-2.5 pr-8 text-xs font-medium focus:outline-none focus:border-orange-500/60 appearance-none cursor-pointer"
               >
-                {LISTA_OBRAS.map(o => (
+                {options.obras.map(o => (
                   <option key={o} value={o}>{o}</option>
                 ))}
               </select>
@@ -166,7 +169,7 @@ export default function Sidebar({
                 onChange={e => handleFilterChange('periodo', e.target.value)}
                 className="w-full bg-[#111c30] text-slate-200 border border-slate-800 rounded-lg py-1.5 px-2.5 pr-8 text-xs font-medium focus:outline-none focus:border-orange-500/60 appearance-none cursor-pointer"
               >
-                {LISTA_PERIODOS.map(p => (
+                {options.periodos.map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -183,7 +186,7 @@ export default function Sidebar({
                 onChange={e => handleFilterChange('cliente', e.target.value)}
                 className="w-full bg-[#111c30] text-slate-200 border border-slate-800 rounded-lg py-1.5 px-2.5 pr-8 text-xs font-medium focus:outline-none focus:border-orange-500/60 appearance-none cursor-pointer"
               >
-                {LISTA_CLIENTES.map(c => (
+                {options.clientes.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -200,7 +203,7 @@ export default function Sidebar({
                 onChange={e => handleFilterChange('responsavel', e.target.value)}
                 className="w-full bg-[#111c30] text-slate-200 border border-slate-800 rounded-lg py-1.5 px-2.5 pr-8 text-xs font-medium focus:outline-none focus:border-orange-500/60 appearance-none cursor-pointer"
               >
-                {LISTA_RESPONSAVEIS.map(r => (
+                {options.responsaveis.map(r => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
@@ -225,7 +228,7 @@ export default function Sidebar({
           <RefreshCw size={10} className="text-emerald-500 animate-spin-slow" />
           <span className="font-semibold tracking-wider text-slate-400">ÚLTIMA ATUALIZAÇÃO</span>
         </div>
-        <p className="font-mono text-[11px] text-slate-300 pl-3.5">20/05/2025 08:30</p>
+        <p className="font-mono text-[11px] text-slate-300 pl-3.5">01/07/2026 06:12</p>
       </div>
     </aside>
   );

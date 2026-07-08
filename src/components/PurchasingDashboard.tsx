@@ -171,7 +171,11 @@ export default function PurchasingDashboard({ data }: PurchasingDashboardProps) 
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Pedidos em Aberto</span>
             <span className="text-base font-black text-white">{kpis.pedidosEmAberto || 0}</span>
-            <span className="text-[9px] text-slate-500 font-bold">Valor: R$ 3,65 Mi</span>
+            <span className="text-[9px] text-slate-500 font-bold">
+              {kpis.totalPendingValue != null && kpis.totalPendingValue > 0
+                ? `Valor: ${kpis.totalPendingValue >= 1000000 ? `R$ ${(kpis.totalPendingValue/1000000).toFixed(2)} Mi` : `R$ ${(kpis.totalPendingValue/1000).toFixed(0)} Mil`}`
+                : 'Pedidos não finalizados'}
+            </span>
           </div>
           <div className="p-2 bg-amber-600/10 text-amber-400 border border-amber-500/10 rounded-lg shrink-0">
             <ShoppingCart size={16} />
@@ -183,7 +187,11 @@ export default function PurchasingDashboard({ data }: PurchasingDashboardProps) 
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Atrasos de Entrega</span>
             <span className="text-base font-black text-white">{kpis.atrasosEntrega || 0}</span>
-            <span className="text-[9px] text-slate-500 font-bold">Valor: R$ 480 Mil</span>
+            <span className="text-[9px] text-slate-500 font-bold">
+              {kpis.totalLateValue != null && kpis.totalLateValue > 0
+                ? `Valor: ${kpis.totalLateValue >= 1000000 ? `R$ ${(kpis.totalLateValue/1000000).toFixed(2)} Mi` : `R$ ${(kpis.totalLateValue/1000).toFixed(0)} Mil`}`
+                : 'Pedidos com deliveryLate'}
+            </span>
           </div>
           <div className="p-2 bg-red-600/10 text-red-400 border border-red-500/10 rounded-lg shrink-0">
             <Truck size={16} />

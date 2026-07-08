@@ -37,7 +37,7 @@ export const LISTA_OBRAS = [
 export const LISTA_PERIODOS = [
   'Este Mês',
   'Último Trimestre',
-  'Ano de 2025'
+  'Ano de 2026'
 ];
 
 export const LISTA_CLIENTES = [
@@ -239,7 +239,7 @@ export function getDashboardData(filters: FilterState) {
     kpis.receitaContratada = parseFloat((kpis.receitaContratada * 0.8).toFixed(2));
     kpis.custoPrevisto = parseFloat((kpis.custoPrevisto * 0.78).toFixed(2));
     kpis.custoReal = parseFloat((kpis.custoReal * 0.75).toFixed(2));
-  } else if (filters.periodo === 'Ano de 2025') {
+  } else if (filters.periodo === 'Ano de 2026') {
     kpis.receitaContratada = parseFloat((kpis.receitaContratada * 1.15).toFixed(2));
     kpis.custoPrevisto = parseFloat((kpis.custoPrevisto * 1.12).toFixed(2));
     kpis.custoReal = parseFloat((kpis.custoReal * 1.10).toFixed(2));
@@ -381,12 +381,12 @@ export function getDashboardData(filters: FilterState) {
 
   // FLUXO DE CAIXA DETALHADO (PRÓXIMOS 6 MESES) for Finance Tab
   const fluxoCaixaDetalhado: FluxoCaixaDetalhadoRow[] = [
-    { mes: 'Jun/2025', entradas: 2150000 * multiplier, saidas: 2280000 * multiplier, saldoProjetado: 2020000 * multiplier, saldoReal: 1760000 * multiplier },
-    { mes: 'Jul/2025', entradas: 2300000 * multiplier, saidas: 2250000 * multiplier, saldoProjetado: 2070000 * multiplier, saldoReal: 1590000 * multiplier },
-    { mes: 'Ago/2025', entradas: 2450000 * multiplier, saidas: 2180000 * multiplier, saldoProjetado: 2340000 * multiplier, saldoReal: 1860000 * multiplier },
-    { mes: 'Set/2025', entradas: 2650000 * multiplier, saidas: 2320000 * multiplier, saldoProjetado: 2670000 * multiplier, saldoReal: 2190000 * multiplier },
-    { mes: 'Out/2025', entradas: 2700000 * multiplier, saidas: 2400000 * multiplier, saldoProjetado: 2970000 * multiplier, saldoReal: 2480000 * multiplier },
-    { mes: 'Nov/2025', entradas: 2800000 * multiplier, saidas: 2500000 * multiplier, saldoProjetado: 3270000 * multiplier, saldoReal: 2790000 * multiplier }
+    { mes: 'Jan/2026', entradas: 1930000 * multiplier, saidas: 1830000 * multiplier, saldoProjetado: 1980000 * multiplier, saldoReal: 1250000 * multiplier },
+    { mes: 'Fev/2026', entradas: 620000 * multiplier, saidas: 401000 * multiplier, saldoProjetado: 680000 * multiplier, saldoReal: 430000 * multiplier },
+    { mes: 'Mar/2026', entradas: 890000 * multiplier, saidas: 754000 * multiplier, saldoProjetado: 950000 * multiplier, saldoReal: 710000 * multiplier },
+    { mes: 'Abr/2026', entradas: 1610000 * multiplier, saidas: 1365000 * multiplier, saldoProjetado: 1720000 * multiplier, saldoReal: 1190000 * multiplier },
+    { mes: 'Mai/2026', entradas: 1010000 * multiplier, saidas: 854000 * multiplier, saldoProjetado: 1090000 * multiplier, saldoReal: 890000 * multiplier },
+    { mes: 'Jun/2026', entradas: 2490000 * multiplier, saidas: 2114000 * multiplier, saldoProjetado: 2680000 * multiplier, saldoReal: 2030000 * multiplier }
   ];
 
   // INDICADORES FINANCEIROS for Finance Tab
@@ -437,11 +437,11 @@ export function getDashboardData(filters: FilterState) {
 
   // Pedidos em Aberto for Purchasing Tab
   const pedidosEmAberto: PedidoAbertoRow[] = [
-    { pedido: 'PE-0456', data: '20/05/2025', fornecedor: 'Gerdau', categoria: 'Aço e Ferragens', valor: 420000 * multiplier, prevEntrega: '28/05/2025', status: 'Confirmado' },
-    { pedido: 'PE-0455', data: '19/05/2025', fornecedor: 'Votorantim Cimentos', categoria: 'Concreto', valor: 310000 * multiplier, prevEntrega: '27/05/2025', status: 'Em Aprovação' },
-    { pedido: 'PE-0454', data: '18/05/2025', fornecedor: 'Concreva Forte', categoria: 'Concreto', valor: 285000 * multiplier, prevEntrega: '29/05/2025', status: 'Aguardando Entrega' },
-    { pedido: 'PE-0453', data: '17/05/2025', fornecedor: 'Tigre', categoria: 'Instalações', valor: 210000 * multiplier, prevEntrega: '30/05/2025', status: 'Cotação' },
-    { pedido: 'PE-0452', data: '16/05/2025', fornecedor: 'Cerâmica Forte', categoria: 'Acabamentos', valor: 195000 * multiplier, prevEntrega: '26/05/2025', status: 'Confirmado' }
+    { pedido: 'PE-0456', data: '20/06/2026', fornecedor: 'Gerdau', categoria: 'Aço e Ferragens', valor: 420000 * multiplier, prevEntrega: '28/06/2026', status: 'Confirmado' },
+    { pedido: 'PE-0455', data: '19/06/2026', fornecedor: 'Votorantim Cimentos', categoria: 'Concreto', valor: 310000 * multiplier, prevEntrega: '27/06/2026', status: 'Em Aprovação' },
+    { pedido: 'PE-0454', data: '18/06/2026', fornecedor: 'Concreva Forte', categoria: 'Concreto', valor: 285000 * multiplier, prevEntrega: '29/06/2026', status: 'Aguardando Entrega' },
+    { pedido: 'PE-0453', data: '17/06/2026', fornecedor: 'Tigre', categoria: 'Instalações', valor: 210000 * multiplier, prevEntrega: '30/06/2026', status: 'Cotação' },
+    { pedido: 'PE-0452', data: '16/06/2026', fornecedor: 'Cerâmica Forte', categoria: 'Acabamentos', valor: 195000 * multiplier, prevEntrega: '26/06/2026', status: 'Confirmado' }
   ];
 
   // Compras por Etapa da Obra for Purchasing Tab

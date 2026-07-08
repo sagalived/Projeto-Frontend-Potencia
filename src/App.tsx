@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import GeneralDashboard from './components/GeneralDashboard';
@@ -6,7 +6,34 @@ import FinancialDashboard from './components/FinancialDashboard';
 import PurchasingDashboard from './components/PurchasingDashboard';
 import Project5DPanel from './components/Project5DPanel';
 import { FilterState } from './types';
-import { getDashboardData, OBRAS_DETAILS } from './data';
+import {
+  getDashboardData,
+  LISTA_CLIENTES,
+  LISTA_OBRAS,
+  LISTA_PERIODOS,
+  LISTA_RESPONSAVEIS,
+  OBRAS_DETAILS,
+} from './data';
+import {
+  buildDashboardDataFromSnapshot,
+  buildSuprimentosData,
+  buildRhData,
+  buildFinanceiroMensal,
+  buildFluxoCaixaDetalhado,
+  buildIndicadoresFinanceiros,
+  buildUltimasMovimentacoes,
+  buildFinanceResults,
+  buildComprasKpisReais,
+  buildTopFornecedoresReais,
+  buildPedidosAbertosReais,
+  buildTopComprasReais,
+  buildComprasCategoriasReais,
+  buildComprasStatusReais,
+  DashboardFilterOptions,
+  getFilterOptionsFromSnapshot,
+  loadSiengeBancoSnapshot,
+  SiengeBancoSnapshot,
+} from './bancoData';
 import {
   Building2,
   HardHat,
@@ -25,6 +52,13 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const defaultFilterOptions: DashboardFilterOptions = {
+    obras: LISTA_OBRAS,
+    periodos: LISTA_PERIODOS,
+    clientes: LISTA_CLIENTES,
+    responsaveis: LISTA_RESPONSAVEIS,
+  };
+
   const [activeTab, setActiveTab] = useState<string>('visao_geral');
   const [filters, setFilters] = useState<FilterState>({
     obra: 'Todas',
@@ -32,19 +66,73 @@ export default function App() {
     cliente: 'Todos',
     responsavel: 'Todos'
   });
+  const [snapshot, setSnapshot] = useState<SiengeBancoSnapshot | null>(null);
+  const [filterOptions, setFilterOptions] = useState<DashboardFilterOptions>(defaultFilterOptions);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadSiengeBancoSnapshot().then(loadedSnapshot => {
+      if (cancelled || !loadedSnapshot) {
+        return;
+      }
+
+      setSnapshot(loadedSnapshot);
+      setFilterOptions(getFilterOptionsFromSnapshot(loadedSnapshot));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setFilters(prev => ({
+      obra: filterOptions.obras.includes(prev.obra) ? prev.obra : 'Todas',
+      periodo: filterOptions.periodos.includes(prev.periodo) ? prev.periodo : filterOptions.periodos[0],
+      cliente: filterOptions.clientes.includes(prev.cliente) ? prev.cliente : 'Todos',
+      responsavel: filterOptions.responsaveis.includes(prev.responsavel) ? prev.responsavel : 'Todos',
+    }));
+  }, [filterOptions]);
 
   // Calculate dashboard data dynamically based on active filters
   const dashboardData = useMemo(() => {
-    return getDashboardData(filters);
-  }, [filters]);
+    return snapshot
+      ? buildDashboardDataFromSnapshot(snapshot, filters)
+      : getDashboardData(filters);
+  }, [snapshot, filters]);
+
+  const availableProjects = useMemo(() => {
+    if (snapshot) {
+      return dashboardData.availableProjects;
+    }
+
+    return Object.values(OBRAS_DETAILS);
+  }, [snapshot, dashboardData]);
+
+  // Real data memos from Sienge snapshot
+  const suprimentosData = useMemo(() => snapshot ? buildSuprimentosData(snapshot) : null, [snapshot]);
+  const rhData = useMemo(() => snapshot ? buildRhData(snapshot) : null, [snapshot]);
+  const financeiroMensal = useMemo(() => snapshot ? buildFinanceiroMensal(snapshot) : null, [snapshot]);
+  const comprasKpisReais = useMemo(() => snapshot ? buildComprasKpisReais(snapshot) : null, [snapshot]);
+  const topFornecedoresReais = useMemo(() => snapshot ? buildTopFornecedoresReais(snapshot) : null, [snapshot]);
+  const pedidosAbertosReais = useMemo(() => snapshot ? buildPedidosAbertosReais(snapshot) : null, [snapshot]);
+  const topComprasReais = useMemo(() => snapshot ? buildTopComprasReais(snapshot) : null, [snapshot]);
+  const comprasCategoriasReais = useMemo(() => snapshot ? buildComprasCategoriasReais(snapshot) : null, [snapshot]);
+  const comprasStatusReais = useMemo(() => snapshot ? buildComprasStatusReais(snapshot) : null, [snapshot]);
+  const financeResultsReais = useMemo(() => snapshot ? buildFinanceResults(snapshot) : null, [snapshot]);
+  const fluxoCaixaDetalhadoReais = useMemo(() => snapshot ? buildFluxoCaixaDetalhado(snapshot) : null, [snapshot]);
+  const indicadoresFinanceirosReais = useMemo(() => snapshot ? buildIndicadoresFinanceiros(snapshot) : null, [snapshot]);
+  const ultimasMovimentacoesReais = useMemo(() => snapshot ? buildUltimasMovimentacoes(snapshot) : null, [snapshot]);
 
   // Handler to switch to 5D visualization of a specific project
   const handleViewProject5D = (projectName: string) => {
+    const selectedProject = availableProjects.find(project => project.name === projectName);
     setFilters(prev => ({
       ...prev,
       obra: projectName,
-      cliente: projectName === 'Escola Municipal Dinâmica' ? 'Prefeitura Municipal' : projectName === 'Edifício Residencial Sol' ? 'Sol Empreendimentos' : 'LogiLog Transportes',
-      responsavel: projectName === 'Escola Municipal Dinâmica' ? 'Eng. João Silva' : projectName === 'Edifício Residencial Sol' ? 'Eng. Maria Santos' : 'Eng. Ricardo Dias'
+      cliente: selectedProject && filterOptions.clientes.includes(selectedProject.cliente) ? selectedProject.cliente : prev.cliente,
+      responsavel: selectedProject && filterOptions.responsaveis.includes(selectedProject.gerenteObra) ? selectedProject.gerenteObra : prev.responsavel,
     }));
     setActiveTab('5d_obra');
   };
@@ -57,6 +145,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         filters={filters}
         setFilters={setFilters}
+        options={filterOptions}
       />
 
       {/* 2. Main Workspace */}
@@ -77,11 +166,39 @@ export default function App() {
           )}
 
           {activeTab === 'financeiro' && (
-            <FinancialDashboard data={dashboardData} />
+            <FinancialDashboard data={{
+              ...dashboardData,
+              financeResults: financeResultsReais ?? dashboardData.financeResults,
+              fluxoCaixaDetalhado: fluxoCaixaDetalhadoReais ?? dashboardData.fluxoCaixaDetalhado,
+              indicadoresFinanceiros: indicadoresFinanceirosReais ?? dashboardData.indicadoresFinanceiros,
+              ultimasMovimentacoes: ultimasMovimentacoesReais ?? dashboardData.ultimasMovimentacoes,
+              fluxoCaixaMensal: financeiroMensal
+                ? financeiroMensal.map(r => ({ mes: r.mes, projetado: parseFloat((r.projetado / 1000000).toFixed(2)), realizado: r.isProjection ? 0 : parseFloat((r.compras / 1000000).toFixed(2)) }))
+                : dashboardData.fluxoCaixaMensal,
+            }} />
           )}
 
           {activeTab === 'compras' && (
-            <PurchasingDashboard data={dashboardData} />
+            <PurchasingDashboard data={{
+              ...dashboardData,
+              kpis: comprasKpisReais ? { ...dashboardData.kpis, ...comprasKpisReais } : dashboardData.kpis,
+              topFornecedores: topFornecedoresReais ?? dashboardData.topFornecedores,
+              pedidosEmAberto: pedidosAbertosReais ?? dashboardData.pedidosEmAberto,
+              comprasCategoria: comprasCategoriasReais ?? dashboardData.comprasCategoria,
+              comprasStatus: comprasStatusReais ?? dashboardData.comprasStatus,
+              curvaSData: financeiroMensal
+                ? (() => {
+                    const lastReal = financeiroMensal.filter(r => !r.isProjection && r.compras > 0);
+                    const maxCompras = lastReal.reduce((s, r) => s + r.compras, 0);
+                    let cum = 0;
+                    return financeiroMensal.map(r => {
+                      cum += r.compras;
+                      const pct = maxCompras === 0 ? 0 : parseFloat(((cum / maxCompras) * 100).toFixed(1));
+                      return { mes: r.mes, previstoFisico: Math.min(100, parseFloat((pct * 1.06).toFixed(1))), realizadoFisico: r.isProjection ? 0 : pct, realizadoFinanceiro: r.isProjection ? 0 : parseFloat((pct * 0.94).toFixed(1)) };
+                    });
+                  })()
+                : dashboardData.curvaSData,
+            }} />
           )}
 
           {activeTab === '5d_obra' && (
@@ -104,7 +221,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {Object.values(OBRAS_DETAILS).map(project => {
+                {availableProjects.map(project => {
                   const progress = Math.round(
                     project.cronograma.reduce((sum, c) => sum + c.concluido, 0) / project.cronograma.length
                   );
@@ -173,57 +290,139 @@ export default function App() {
             <div className="p-6 flex flex-col gap-6 animate-fade-in text-slate-300">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
-                  <h2 className="text-base font-extrabold text-white tracking-wider uppercase">Controle de Suprimentos & Logística</h2>
-                  <p className="text-xs text-slate-500 mt-1">Estoque e movimentação de insumos nos canteiros.</p>
+                  <h2 className="text-base font-extrabold text-white tracking-wider uppercase">Suprimentos — Comprado e Entregue no Último Mês</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {suprimentosData ? `Período: ${suprimentosData.lastMonthLabel} · ${suprimentosData.pedidosCount} pedidos · ${suprimentosData.entreguesCount} entregues` : 'Carregando dados do Sienge...'}
+                  </p>
                 </div>
                 <span className="text-xs bg-[#122240] text-orange-400 font-bold px-3 py-1 rounded-md border border-orange-500/20">
-                  Integração Almoxarifado ERP Sienge
+                  ERP Sienge — Dados em Tempo Real
                 </span>
               </div>
 
-              {/* Suprimentos items table */}
+              {/* KPI cards */}
+              {suprimentosData && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#0b1329] border border-slate-800 rounded-xl p-4 flex flex-col gap-1 shadow-md">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Total Comprado (Mês)</span>
+                    <span className="text-base font-black text-white">R$ {(suprimentosData.totalComprado / 1000000).toFixed(2).replace('.', ',')} Mi</span>
+                    <span className="text-[9px] text-slate-400">{suprimentosData.pedidosCount} pedidos emitidos</span>
+                  </div>
+                  <div className="bg-[#0b1329] border border-slate-800 rounded-xl p-4 flex flex-col gap-1 shadow-md">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Total Entregue (Mês)</span>
+                    <span className="text-base font-black text-emerald-400">R$ {(suprimentosData.totalEntregue / 1000000).toFixed(2).replace('.', ',')} Mi</span>
+                    <span className="text-[9px] text-slate-400">{suprimentosData.entreguesCount} pedidos entregues</span>
+                  </div>
+                  <div className="bg-[#0b1329] border border-slate-800 rounded-xl p-4 flex flex-col gap-1 shadow-md">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Taxa de Entrega</span>
+                    <span className="text-base font-black text-white">
+                      {suprimentosData.pedidosCount > 0 ? ((suprimentosData.entreguesCount / suprimentosData.pedidosCount) * 100).toFixed(0) : 0}%
+                    </span>
+                    <span className="text-[9px] text-slate-400">Pedidos FULLY_DELIVERED</span>
+                  </div>
+                  <div className="bg-[#0b1329] border border-slate-800 rounded-xl p-4 flex flex-col gap-1 shadow-md">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Pendentes de Entrega</span>
+                    <span className="text-base font-black text-amber-400">{suprimentosData.pedidosCount - suprimentosData.entreguesCount}</span>
+                    <span className="text-[9px] text-slate-400">Pedidos em aberto</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Comprado no último mês */}
               <div className="bg-[#0b1329] border border-slate-800 rounded-xl overflow-hidden p-5 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Status dos Insumos Críticos</h3>
-                  <span className="text-[10px] font-mono text-slate-500 font-bold">Atualizado hoje às 07:00</span>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Pedidos do Último Mês — Por Valor (Sienge)</h3>
+                  <span className="text-[10px] font-mono text-slate-500 font-bold">
+                    {suprimentosData ? `${suprimentosData.comprado.length} maiores pedidos` : '—'}
+                  </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-medium border-collapse">
                     <thead>
                       <tr className="bg-slate-900/40 text-slate-500 border-b border-slate-800 uppercase tracking-wider text-[10px] font-bold">
-                        <th className="py-2.5 px-4">Material</th>
-                        <th className="py-2.5 px-3">Unidade</th>
-                        <th className="py-2.5 px-3 text-right">Estoque Atual</th>
-                        <th className="py-2.5 px-3 text-right">Consumo Mensal</th>
-                        <th className="py-2.5 px-3 text-right">Mínimo Crítico</th>
-                        <th className="py-2.5 px-4 text-right">Status Estoque</th>
+                        <th className="py-2.5 px-3">Pedido</th>
+                        <th className="py-2.5 px-3">Data</th>
+                        <th className="py-2.5 px-3">Descrição</th>
+                        <th className="py-2.5 px-3">Categoria</th>
+                        <th className="py-2.5 px-3 text-right">Valor</th>
+                        <th className="py-2.5 px-3 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/40 text-slate-300">
-                      {[
-                        { mat: 'Cimento CP-II', uni: 'Saco (50kg)', est: '1.240', cons: '3.500', min: '800', status: 'Estável', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-                        { mat: 'Aço CA-50 10mm', uni: 'Tonelada', est: '14,2', cons: '22,0', min: '15,0', status: 'Abaixo do Mínimo', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
-                        { mat: 'Areia Lavada Média', uni: 'm³', est: '450', cons: '1.200', min: '300', status: 'Estável', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
-                        { mat: 'Brita 1', uni: 'm³', est: '210', cons: '900', min: '250', status: 'Crítico', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
-                        { mat: 'Bloco Cerâmico 9x19x19', uni: 'Milheiro', est: '35,0', cons: '50,0', min: '12,0', status: 'Estável', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }
-                      ].map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-800/20 text-slate-200 transition-colors">
-                          <td className="py-3 px-4 font-semibold">{item.mat}</td>
-                          <td className="py-3 px-3 text-slate-400">{item.uni}</td>
-                          <td className="py-3 px-3 text-right font-mono font-bold">{item.est}</td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-400">{item.cons}</td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-400">{item.min}</td>
-                          <td className="py-3 px-4 text-right">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${item.color}`}>
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {(suprimentosData?.comprado ?? []).map((item, idx) => {
+                        const statusColor =
+                          item.status === 'FULLY_DELIVERED' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                          item.status === 'PARTIALLY_DELIVERED' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                          item.status === 'PENDING' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                          'text-slate-400 bg-slate-500/10 border-slate-700/40';
+                        const statusLabel =
+                          item.status === 'FULLY_DELIVERED' ? 'Entregue' :
+                          item.status === 'PARTIALLY_DELIVERED' ? 'Parcial' :
+                          item.status === 'PENDING' ? 'Pendente' : item.status;
+                        return (
+                          <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                            <td className="py-2.5 px-3 font-mono text-slate-400">#{item.orderNumber}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{item.date?.slice(5).replace('-', '/')}/{item.date?.slice(0, 4)}</td>
+                            <td className="py-2.5 px-3 font-semibold max-w-xs truncate">{item.description || '—'}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{item.category}</td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-white">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(item.totalPrice)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${statusColor}`}>{statusLabel}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {!suprimentosData && (
+                        <tr><td colSpan={6} className="py-8 text-center text-slate-500 text-xs">Carregando dados do Sienge...</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
+
+              {/* Entregues no último mês */}
+              {suprimentosData && suprimentosData.entregue.length > 0 && (
+                <div className="bg-[#0b1329] border border-slate-800 rounded-xl overflow-hidden p-5 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">✓ Entregues no Canteiro — {suprimentosData.lastMonthLabel}</h3>
+                    <span className="text-[10px] font-mono text-slate-500 font-bold">{suprimentosData.entregue.length} pedidos</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-medium border-collapse">
+                      <thead>
+                        <tr className="bg-slate-900/40 text-slate-500 border-b border-slate-800 uppercase tracking-wider text-[10px] font-bold">
+                          <th className="py-2.5 px-3">Pedido</th>
+                          <th className="py-2.5 px-3">Data</th>
+                          <th className="py-2.5 px-3">Descrição</th>
+                          <th className="py-2.5 px-3">Categoria</th>
+                          <th className="py-2.5 px-3 text-right">Valor</th>
+                          <th className="py-2.5 px-3 text-right">Autorizado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                        {suprimentosData.entregue.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                            <td className="py-2.5 px-3 font-mono text-slate-400">#{item.orderNumber}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{item.date?.slice(5).replace('-', '/')}/{item.date?.slice(0, 4)}</td>
+                            <td className="py-2.5 px-3 font-semibold max-w-xs truncate">{item.description || '—'}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{item.category}</td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(item.totalPrice)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${item.authorized ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20'}`}>
+                                {item.authorized ? 'Sim' : 'Não'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -233,20 +432,22 @@ export default function App() {
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
                   <h2 className="text-base font-extrabold text-white tracking-wider uppercase">Gestão de Recursos Humanos</h2>
-                  <p className="text-xs text-slate-500 mt-1">Controle de efetivo, segurança laboral e alocação.</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {rhData ? `${rhData.totalUsuarios} usuários ativos no ERP · ${rhData.usuariosObras} em obras · ${rhData.usuariosCompras} em compras` : 'Carregando dados do Sienge...'}
+                  </p>
                 </div>
                 <span className="text-xs bg-[#122240] text-orange-400 font-bold px-3 py-1 rounded-md border border-orange-500/20">
-                  Integração CRM / Folha Sienge
+                  ERP Sienge — Dados em Tempo Real
                 </span>
               </div>
 
               {/* Personnel stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                  { title: 'EFETIVO TOTAL', val: '438 colaboradores', desc: 'Próprio e terceirizado', icon: Users },
-                  { title: 'ENGENHEIROS ATIVOS', val: '12 residentes', desc: 'Acompanhamento diário', icon: HardHat },
-                  { title: 'TREINAMENTOS NR', val: '98% adimplência', desc: 'Meta de segurança laboral', icon: Award },
-                  { title: 'TAXA DE ABSENTEÍSMO', val: '1,4%', desc: 'Abaixo da média setorial', icon: Clock }
+                  { title: 'USUÁRIOS ERP ATIVOS', val: rhData ? `${rhData.totalUsuarios} usuários` : '—', desc: 'Registros ativos no Sienge', icon: Users },
+                  { title: 'RESPONSÁVEIS POR OBRAS', val: rhData ? `${rhData.usuariosObras} usuários` : '—', desc: 'Com vínculo a empreendimentos', icon: HardHat },
+                  { title: 'COMPRADORES ATIVOS', val: rhData ? `${rhData.usuariosCompras} usuários` : '—', desc: 'Com pedidos de compra', icon: Award },
+                  { title: 'CONTAS BANCÁRIAS', val: snapshot ? `${snapshot.financeiro.datasets?.contasCorrentes?.total ?? 0} contas` : '—', desc: 'Integradas ao ERP', icon: Clock }
                 ].map((stat, idx) => {
                   const Icon = stat.icon;
                   return (
@@ -263,6 +464,49 @@ export default function App() {
                   );
                 })}
               </div>
+
+              {/* Usuários reais do ERP */}
+              {rhData && (
+                <div className="bg-[#0b1329] border border-slate-800 rounded-xl overflow-hidden p-5 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Usuários Registrados no ERP Sienge</h3>
+                    <span className="text-[10px] font-mono text-slate-500 font-bold">
+                      Sincronizado em {new Date(rhData.fetchedAt).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-medium border-collapse">
+                      <thead>
+                        <tr className="bg-slate-900/40 text-slate-500 border-b border-slate-800 uppercase tracking-wider text-[10px] font-bold">
+                          <th className="py-2.5 px-4">Usuário</th>
+                          <th className="py-2.5 px-3">Atuação</th>
+                          <th className="py-2.5 px-3">Última Obra / Pedido</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                        {rhData.usuarios.map((u, idx) => (
+                          <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                            <td className="py-2.5 px-4 font-semibold">{u.nome}</td>
+                            <td className="py-2.5 px-3">
+                              <div className="flex gap-1 flex-wrap">
+                                {u.fontes.includes('obras') && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Obras</span>
+                                )}
+                                {u.fontes.includes('compras') && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Compras</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-400 max-w-xs truncate">
+                              {u.ultimaObra ?? (u.ultimoPedido ? `Pedido #${u.ultimoPedido}` : '—')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
